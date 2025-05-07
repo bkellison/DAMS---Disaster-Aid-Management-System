@@ -36,7 +36,7 @@ DAMS is a web application designed to coordinate disaster relief efforts by conn
 ### Frontend Setup
 1. Navigate to the frontend directory
 2. Install dependencies: `npm install`
-3. Run development server: `npm run serve`
+3. Run development server: `npm run dev`
 
 ## License
 This project is currently unlicensed.
