@@ -14,10 +14,11 @@
 
         <input v-model="newItem.name" placeholder="Item Name" required />
         <textarea v-model="newItem.description" placeholder="Description"></textarea>
+        <input type="number" v-model="newItem.quantity" placeholder="Quantity" min="1" required />
         
         <div class="button-row">
           <button type="submit">{{ isEditing ? 'Update Item' : 'Add Item' }}</button>
-          <button v-if="isEditing" type="button" class="cancel-btn" @click="cancelEdit">Cancel</button>
+          <button v-if="isEditing" type="button" class="secondary-btn" @click="cancelEdit">Cancel</button>
         </div>
       </form>
 
@@ -29,7 +30,7 @@
           <div>
             <strong>{{ item.name }}</strong>
             ({{ categories.find(c => c.category_id === item.category_id)?.category_name || 'Unknown' }})
-            - {{ item.quantity }}
+            - Quantity: {{ item.quantity }}
           </div>
           <div>
             <button @click="startEditItem(item)" class="edit-btn">Edit</button>
@@ -77,7 +78,7 @@ const addOrUpdateItem = async () => {
     await axios.post('http://127.0.0.1:5000/api/admin/items', newItem.value)
   }
   await fetchItems()
-  Object.assign(newItem.value, { name: '', description: '', category_id: '' })
+  Object.assign(newItem.value, { name: '', description: '', category_id: '', quantity: 1 })
 }
 
 const cancelEdit = () => {
@@ -87,26 +88,37 @@ const cancelEdit = () => {
 }
 
 const deleteItem = async (id) => {
-  if (confirm('Are you sure?')) {
-    await axios.delete(`http://127.0.0.1:5000/api/admin/items/${id}`)
-    await fetchItems()
+  if (confirm("Are you sure you want to delete this item?")) {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/api/admin/items/${id}`);
+      await fetchItems(); // Refresh list
+    } catch (err) {
+      alert("Failed to delete item: " + err.message);
+    }
   }
-}
+};
 
 const isEditing = ref(false)
 const editingItemId = ref(null)
 
 const startEditItem = (item) => {
-  isEditing.value = true
-  editingItemId.value = item.id
+  isEditing.value = true;
+  editingItemId.value = item.id;
   newItem.value = {
     name: item.name,
     description: item.description,
     category_id: item.category_id,
-    quantity: item.quantity,
+    quantity: item.quantity || 1,
     created_by: item.created_by
-  }
-}
+  };
+
+  // Scroll to top
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth' 
+  });
+};
+
 
 onMounted(() => {
   fetchItems()
@@ -118,12 +130,13 @@ onMounted(() => {
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
 .manage-container {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 50px 20px;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C;
-  max-width: 600px;
-  margin: auto;
-  padding: 50px 20px;
 }
 
 .content-box {
@@ -132,6 +145,8 @@ onMounted(() => {
   padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
+  width: 750px;
+  text-align: center;
 }
 
 .manage-header {
@@ -143,6 +158,7 @@ onMounted(() => {
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 20px;
+  text-align: center;
 }
 
 form {
@@ -165,6 +181,20 @@ textarea {
 }
 
 button {
+  background: #2e8b57;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 18px;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+   background: #236b43;
+}
+
+.secondary-btn {
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   color: white;
   border: none;
@@ -174,7 +204,7 @@ button {
   transition: transform 0.2s ease-in-out, background-color 0.3s;
 }
 
-button:hover {
+.secondary-btn:hover {
   transform: scale(1.05);
   background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
@@ -238,20 +268,6 @@ button:hover {
   gap: 10px;
   justify-content: flex-start;
   margin-top: 10px;
-}
-
-.cancel-btn {
-  background-color: #ccc;
-  color: #333;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 16px;
-  border: none;
-  transition: background-color 0.2s ease;
-}
-
-.cancel-btn:hover {
-  background-color: #bbb;
 }
 
 .no-items {

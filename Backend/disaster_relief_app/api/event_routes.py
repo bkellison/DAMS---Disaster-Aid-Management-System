@@ -86,12 +86,22 @@ def get_categories():
     
 @event_routes.route('/admin/events/<int:event_id>', methods=['DELETE'])
 def delete_event(event_id):
-    event = Event.query.get(event_id)
-    if not event:
-        return jsonify({'error': 'Event not found'}), 404
-    db.session.delete(event)
-    db.session.commit()
-    return jsonify({'message': 'Event deleted'}), 200
+    try:
+        # First, delete all related event_category entries
+        EventCategory.query.filter_by(event_id=event_id).delete()
+        
+        # Then delete the event
+        event = Event.query.get(event_id)
+        if not event:
+            return jsonify({'error': 'Event not found'}), 404
+            
+        db.session.delete(event)
+        db.session.commit()
+        return jsonify({'message': 'Event deleted'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print("Error deleting event:", e)
+        return jsonify({'error': 'Failed to delete event'}), 500
 
 @event_routes.route('/admin/events/<int:event_id>', methods=['PUT'])
 def update_event(event_id):

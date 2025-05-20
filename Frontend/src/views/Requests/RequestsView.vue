@@ -88,11 +88,11 @@ const createNewRequest = () => {
   
 /* Content box styling */
 .content-box {
-    background-color: #f9f3e8;
+    background-color: #5c4033;
     border-radius: 15px;
     padding: 40px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid #c9b28e;
+    border: 10px solid #c9b28e;
 }
   
 /* Header styling */
@@ -105,29 +105,30 @@ const createNewRequest = () => {
     font-weight: 600;
     color: #5c4033; 
     margin-bottom: 25px; 
+    border: 5px solid #c9b28e;
 }
 
 /* Action section styling */
 .action-section {
     margin-bottom: 30px;
     text-align: left;
+    
 }
 
 /* Create button styling */
 .create-btn {
-    background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 18px;
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out, background-color 0.3s;
+  background: #2e8b57;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .create-btn:hover {
-    transform: scale(1.05);
-    background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
+  background: #236b43;
 }
 
 /* No requests message styling */
@@ -149,6 +150,7 @@ const createNewRequest = () => {
     width: 100%;
     margin-top: 30px;
     border-collapse: collapse;
+    border: 5px solid #c9b28e;
 }
 
 .requests-table th,

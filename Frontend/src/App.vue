@@ -21,55 +21,85 @@ const showEventLinks = ref(false);
 const showRequestLinks = ref(false);
 const showItemLinks = ref(false);
 
+// Refs for showing/hiding contextual donor nav links
+const showPledgeLinks = ref(false);
+const showDonorRequestLinks = ref(false);
+const showDonorMatchLinks = ref(false);
+
+// Refs for showing/hiding contextual recipient nav links
+const showCreateRequestLinks = ref(false);
+const showRecipientRequestLinks = ref(false);
+const showRecipientMatchLinks = ref(false);
+
 // Watch for route changes to update nav link visibility
 watch(() => route.path, (newPath) => {
-  // For Events section
+  // For Admin - Events section
   if (newPath.includes('/admin/view-events') || newPath.includes('/admin/create-event')) {
     showEventLinks.value = true;
   } else {
     showEventLinks.value = false;
   }
   
-  // For Requests section
+  // For Admin - Requests section
   if (newPath.includes('/create-request') || newPath.includes('/respond-to-requests')) {
     showRequestLinks.value = true;
   } else {
     showRequestLinks.value = false;
   }
   
-  // For Items section
+  // For Admin - Items section
   if (newPath.includes('/admin/manage-items')) {
     showItemLinks.value = true;
   } else {
     showItemLinks.value = false;
+  }
+  
+  // For Donor - Pledges section
+  if (newPath.includes('/pledge-view') || newPath.includes('/create-pledge')) {
+    showPledgeLinks.value = true;
+  } else {
+    showPledgeLinks.value = false;
+  }
+  
+  // For Donor - Requests section
+  if (isDonor.value && (newPath.includes('/respond-to-requests') || newPath.includes('/respond/'))) {
+    showDonorRequestLinks.value = true;
+  } else {
+    showDonorRequestLinks.value = false;
+  }
+  
+  // For Donor - Matches section
+  if (isDonor.value && newPath.includes('/match-view')) {
+    showDonorMatchLinks.value = true;
+  } else {
+    showDonorMatchLinks.value = false;
+  }
+  
+  // For Recipient - Create Request section
+  if (isRecipient.value && newPath.includes('/create-request')) {
+    showCreateRequestLinks.value = true;
+  } else {
+    showCreateRequestLinks.value = false;
+  }
+  
+  // For Recipient - View Requests section
+  if (isRecipient.value && newPath.includes('/request-view')) {
+    showRecipientRequestLinks.value = true;
+  } else {
+    showRecipientRequestLinks.value = false;
+  }
+  
+  // For Recipient - Matches section
+  if (isRecipient.value && newPath.includes('/match-view')) {
+    showRecipientMatchLinks.value = true;
+  } else {
+    showRecipientMatchLinks.value = false;
   }
 }, { immediate: true });
 
 const handleLogout = () => {
   authStore.logout();
   router.push({ path: `/`, replace: true });
-}
-
-// Function to toggle nav sections
-const toggleEventLinks = () => {
-  showEventLinks.value = !showEventLinks.value;
-  if (showEventLinks.value) {
-    router.push('/admin/view-events');
-  }
-}
-
-const toggleRequestLinks = () => {
-  showRequestLinks.value = !showRequestLinks.value;
-  if (showRequestLinks.value) {
-    router.push('/respond-to-requests');
-  }
-}
-
-const toggleItemLinks = () => {
-  showItemLinks.value = !showItemLinks.value;
-  if (showItemLinks.value) {
-    router.push('/admin/manage-items');
-  }
 }
 </script>
 
@@ -87,12 +117,20 @@ const toggleItemLinks = () => {
         <router-link to="/reset-password" active-class="active-link">Reset Password</router-link>
       </template>
       
-      <!-- Admin has simplified main navigation -->
+      <!-- Main Dashboard Links by Role -->
       <template v-if="isLoggedIn && isAdmin">
         <router-link to="/admin" active-class="active-link">Admin Dashboard</router-link>
       </template>
       
-      <!-- Contextual admin navigation items -->
+      <template v-if="isLoggedIn && isDonor">
+        <router-link to="/donor" active-class="active-link">Donor Dashboard</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isRecipient">
+        <router-link to="/recipient" active-class="active-link">Recipient Dashboard</router-link>
+      </template>
+      
+      <!-- Admin Contextual Navigation -->
       <template v-if="isLoggedIn && isAdmin && showEventLinks">
         | <router-link to="/admin/create-event" active-class="active-link">Create Event</router-link>
         | <router-link to="/admin/view-events" active-class="active-link">View Events</router-link>
@@ -107,14 +145,31 @@ const toggleItemLinks = () => {
         | <router-link to="/admin/manage-items" active-class="active-link">Manage Items</router-link>
       </template>
       
-      <!-- Donor navigation -->
-      <template v-if="isLoggedIn && isDonor">
-        | <router-link to="/donor" active-class="active-link">Donor Dashboard</router-link>
+      <!-- Donor Contextual Navigation -->
+      <template v-if="isLoggedIn && isDonor && showPledgeLinks">
+        | <router-link to="/create-pledge" active-class="active-link">Create Pledge</router-link>
+        | <router-link to="/pledge-view" active-class="active-link">View Pledges</router-link>
       </template>
       
-      <!-- Recipient navigation -->
-      <template v-if="isLoggedIn && isRecipient">
-        | <router-link to="/recipient" active-class="active-link">Recipient Dashboard</router-link>
+      <template v-if="isLoggedIn && isDonor && showDonorRequestLinks">
+        | <router-link to="/respond-to-requests" active-class="active-link">View All Requests</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isDonor && showDonorMatchLinks">
+        | <router-link to="/match-view" active-class="active-link">View Matches</router-link>
+      </template>
+      
+      <!-- Recipient Contextual Navigation -->
+      <template v-if="isLoggedIn && isRecipient && showCreateRequestLinks">
+        | <router-link to="/create-request" active-class="active-link">Create Request</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isRecipient && showRecipientRequestLinks">
+        | <router-link to="/request-view" active-class="active-link">View Requests</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isRecipient && showRecipientMatchLinks">
+        | <router-link to="/match-view" active-class="active-link">View Matches</router-link>
       </template>
     </nav>
   </header>

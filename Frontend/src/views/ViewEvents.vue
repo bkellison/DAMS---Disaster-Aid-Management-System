@@ -1,51 +1,74 @@
 <template>
   <div class="event-view-container">
-    <h2 class="event-header">All Disaster Events</h2>
-    <p>Browse the list of all created disaster events below.</p>
+    <div class="content-box">
+      <h2 class="event-header">All Disaster Events</h2>
+      <p class="description">Browse the list of all created disaster events below.</p>
 
-    <div v-if="events.length === 0" class="no-events">No events found.</div>
+      <div v-if="events.length === 0" class="no-events">No events found.</div>
 
-    <ul class="event-list">
-      <li v-for="event in events" :key="event.event_id" class="event-card">
-        <h3 class="event-title">{{ event.name }}</h3>
-        <p><strong>Categories:</strong> {{ event.categories.join(', ') }}</p>
-        <p><strong>Location:</strong> {{ event.location }}</p>
-        <p>
-          <strong>Start:</strong> {{ event.start_date }} |
-          <strong>End:</strong> {{ event.end_date }}
-        </p>
-        <p><strong>Status:</strong> {{ event.is_active ? 'Active' : 'Inactive' }}</p>
+      <ul class="event-list">
+        <li v-for="event in events" :key="event.event_id" class="event-card">
+          <h3 class="event-title">{{ event.name }}</h3>
+          <p><strong>Categories:</strong> {{ event.categories.join(', ') }}</p>
+          <p><strong>Location:</strong> {{ event.location }}</p>
+          <p>
+            <strong>Start:</strong> {{ event.start_date }} |
+            <strong>End:</strong> {{ event.end_date }}
+          </p>
+          <p><strong>Status:</strong> {{ event.is_active ? 'Active' : 'Inactive' }}</p>
 
-        <div class="button-group">
-          <button class="edit-btn" @click="editEvent(event)">Edit</button>
-          <button class="delete-btn" @click="deleteEvent(event.event_id)">Delete</button>
-        </div>
-      </li>
-    </ul>
+          <div class="button-group">
+            <button @click="editEvent(event)" class="edit-btn">Edit</button>
+            <button @click="deleteEvent(event.event_id)" class="delete-btn">Delete</button>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
+  
+  <!-- Edit Event Modal -->
   <div v-if="selectedEvent" class="modal-overlay">
-  <div class="modal">
-    <h3>Edit Event</h3>
-    <form @submit.prevent="updateEvent">
-      <input v-model="selectedEvent.name" placeholder="Event Name" required />
-      <label>Requested Item Categories:</label>
-      <select v-model="selectedEvent.categoryIds" multiple>
-        <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-          {{ cat.category_name }}
-        </option>
-      </select>
-      <input v-model="selectedEvent.location" placeholder="Location" required />
-      <input type="date" v-model="selectedEvent.start_date" required />
-      <input type="date" v-model="selectedEvent.end_date" required />
+    <div class="modal">
+      <h3>Edit Event</h3>
+      <form @submit.prevent="updateEvent">
+        <div class="form-group">
+          <label for="event-name">Event Name:</label>
+          <input id="event-name" v-model="selectedEvent.name" placeholder="Event Name" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="event-location">Location:</label>
+          <input id="event-location" v-model="selectedEvent.location" placeholder="Location" required />
+        </div>
+        
+        <div class="form-group date-group">
+          <div>
+            <label for="start-date">Start Date:</label>
+            <input id="start-date" type="date" v-model="selectedEvent.start_date" required />
+          </div>
+          <div>
+            <label for="end-date">End Date:</label>
+            <input id="end-date" type="date" v-model="selectedEvent.end_date" required />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Categories:</label>
+          <select v-model="selectedEvent.categoryIds" multiple>
+            <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+              {{ cat.category_name }}
+            </option>
+          </select>
+          <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
+        </div>
 
-      <div class="modal-buttons">
-        <button type="submit">Save Changes</button>
-        <button type="button" class="cancel-btn" @click="selectedEvent = null">Cancel</button>
-      </div>
-    </form>
+        <div class="modal-buttons">
+          <button type="submit" class="save-btn">Save Changes</button>
+          <button type="button" class="cancel-btn" @click="selectedEvent = null">Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
-
 </template>
 
 <script setup>
@@ -57,13 +80,21 @@ const categories = ref([])
 const selectedEvent = ref(null)
 
 const fetchEvents = async () => {
-  const res = await axios.get('/api/admin/events')
-  events.value = res.data
+  try {
+    const res = await axios.get('/api/admin/events')
+    events.value = res.data
+  } catch (error) {
+    console.error('Error fetching events:', error)
+  }
 }
 
 const fetchCategories = async () => {
-  const res = await axios.get('/api/categories')
-  categories.value = res.data
+  try {
+    const res = await axios.get('/api/categories')
+    categories.value = res.data
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  }
 }
 
 const deleteEvent = async (id) => {
@@ -78,16 +109,20 @@ const deleteEvent = async (id) => {
 };
 
 const editEvent = async (event) => {
-  // Get category IDs for this event (you could fetch from backend or use stored data)
-  const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`)
-  const categoryIds = categoryRes.data.map(cat => cat.category_id)
+  try {
+    // Get category IDs for this event
+    const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`)
+    const categoryIds = categoryRes.data.map(cat => cat.category_id)
 
-  selectedEvent.value = {
-    ...event,
-    categoryIds
+    selectedEvent.value = {
+      ...event,
+      categoryIds
+    }
+  } catch (error) {
+    console.error('Error fetching event categories:', error)
+    alert('Could not load event categories')
   }
 }
-
 
 const updateEvent = async () => {
   try {
@@ -100,7 +135,6 @@ const updateEvent = async () => {
   }
 }
 
-
 onMounted(() => {
   fetchEvents()
   fetchCategories()
@@ -112,11 +146,25 @@ onMounted(() => {
 
 .event-view-container {
   font-family: 'Poppins', sans-serif;
-  color: #8B5E3C;
-  max-width: 800px;
+  color: #5c4033;
+  max-width: 1000px;
   margin: auto;
   padding: 50px 20px;
   text-align: center;
+}
+
+.description {
+  color: #8B5E3C; 
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
 }
 
 .event-header {
@@ -134,6 +182,9 @@ onMounted(() => {
   font-size: 18px;
   color: #777;
   margin-top: 20px;
+  padding: 40px;
+  background: #f5f5f5;
+  border-radius: 8px;
 }
 
 .event-list {
@@ -143,9 +194,9 @@ onMounted(() => {
 }
 
 .event-card {
-  background: #f9f9f9;
-  border: 1px solid #d3c0a3;
-  padding: 20px;
+  background: #ffffff;
+  border: 2px solid #d3c0a3;
+  padding: 25px;
   border-radius: 12px;
   margin-bottom: 20px;
   text-align: left;
@@ -160,31 +211,38 @@ onMounted(() => {
   font-size: 22px;
   font-weight: 600;
   color: #5c4033;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.event-card p {
+  margin: 10px 0;
+  line-height: 1.5;
 }
 
 .button-group {
-  margin-top: 15px;
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
 }
 
 .edit-btn,
 .delete-btn {
-  font-size: 14px;
-  padding: 8px 14px;
-  margin-right: 10px;
+  font-size: 16px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: 0.3s ease, transform 0.2s ease;
 }
 
 .edit-btn {
-  background-color: #007bff;
+  background-color: #4a90e2;
   color: white;
 }
 
 .edit-btn:hover {
-  background-color: #0056b3;
+  background-color: #3a7bc8;
+  transform: scale(1.05);
 }
 
 .delete-btn {
@@ -194,15 +252,17 @@ onMounted(() => {
 
 .delete-btn:hover {
   background-color: #c82333;
+  transform: scale(1.05);
 }
 
+/* Modal Styling */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -210,46 +270,98 @@ onMounted(() => {
 }
 
 .modal {
-  background: white;
+  background: #f9f3e8;
   padding: 30px;
-  border-radius: 12px;
-  max-width: 400px;
+  border-radius: 15px;
+  max-width: 550px;
   width: 90%;
   font-family: 'Poppins', sans-serif;
   color: #5c4033;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.modal h3 {
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #5c4033;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #5c4033;
+}
+
+.date-group {
+  display: flex;
+  gap: 15px;
+}
+
+.date-group > div {
+  flex: 1;
 }
 
 .modal input,
 .modal select {
   width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #d3c0a3;
+  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.modal select[multiple] {
+  height: 120px;
+}
+
+.help-text {
+  font-size: 14px;
+  color: #777;
+  margin-top: 5px;
+  font-style: italic;
 }
 
 .modal-buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
+  margin-top: 25px;
 }
 
-.modal button {
-  padding: 10px 16px;
+.save-btn,
+.cancel-btn {
+  padding: 12px 24px;
   border-radius: 8px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 500;
   border: none;
   cursor: pointer;
+  transition: transform 0.2s ease, 0.3s ease;
+  min-width: 120px;
 }
 
-.modal button[type="submit"] {
-  background-color: #8B5E3C;
+.save-btn {
+  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   color: white;
 }
 
-.cancel-btn {
-  background-color: #ccc;
+.save-btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
 
+.cancel-btn {
+  background: #e0e0e0;
+  color: #333;
+}
 
+.cancel-btn:hover {
+  background: #d0d0d0;
+}
 </style>

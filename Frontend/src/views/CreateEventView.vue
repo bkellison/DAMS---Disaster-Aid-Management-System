@@ -95,6 +95,7 @@ onMounted(fetchCategories)
   padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
+  width: 500px
 }
 
 .event-header {

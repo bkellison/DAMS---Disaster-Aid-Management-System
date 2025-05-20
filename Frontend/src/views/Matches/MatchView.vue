@@ -101,6 +101,8 @@ const getStatusClass = (status) => {
     padding: 50px; 
     border-radius: 12px;
     margin-top: 40px; 
+    border: 10px solid #c9b28e;
+
 }
   
 .match-header {
@@ -112,12 +114,16 @@ const getStatusClass = (status) => {
     font-weight: 600;
     color: #5c4033; 
     margin-bottom: 25px; 
+    border: 5px solid #c9b28e;
+
 }
 
 .match-table {
     width: 100%;
     margin-top: 30px;
     border-collapse: collapse;
+    border: 5px solid #c9b28e;
+
 }
 
 .match-table th,
@@ -131,12 +137,14 @@ const getStatusClass = (status) => {
     background-color: #f5e1c5;
     color: #5c4033;
     text-align: left;
+    
 }
 
 .match-table td {
     background-color: #fdf6ee;
     color: #5c4033;
     text-align: left;
+    
 }
 
 .action-btn {

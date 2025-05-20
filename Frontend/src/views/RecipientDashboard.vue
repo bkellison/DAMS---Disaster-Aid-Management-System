@@ -6,24 +6,6 @@ import axios from 'axios';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const isAdmin = computed(() => authStore.role === 'Admin');
-
-const requests = ref([])
-
-async function getRequests() {
-    try {
-        const response = await axios.get(`http://127.0.0.1:5000/getRequests?user_id=${authStore.userId}`)
-        requests.value = response.data.filter(i => i.request_quantity_remaining > 0);
-    } catch (error) {
-        console.error('Error getting requests:', error);
-        throw error;
-    }
-}
-
-// Hardcoded / Mock Data temporarily
-onMounted(() => {
-    getRequests();
-})
 
 const handleCreateRequest = () => {
   router.push({ path: `/create-request`, replace: true });
@@ -42,17 +24,18 @@ const handleViewMatches = () => {
   <div class="recipient-container">
     <div class="content-box">
       <h1 class="recipient-header">Recipient Dashboard</h1>
+      <p>Manage your requests and track donations from donors.</p>
       
       <div class="recipient-boxes">
         <div class="recipient-box">
           <h3>Create Request</h3>
-          <p>Create a new request for disaster relief supplies</p>
+          <p>Create a new request for disaster relief supplies you need</p>
           <button @click="handleCreateRequest">Create Request</button>
         </div>
 
         <div class="recipient-box">
           <h3>View Requests</h3>
-          <p>View your existing requests for help</p>
+          <p>Track your existing requests and their fulfillment status</p>
           <button @click="handleViewRequests">View Requests</button>
         </div>
 
@@ -86,7 +69,7 @@ const handleViewMatches = () => {
   border-radius: 15px;
   padding: 40px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid #c9b28e;
+  border: 10px solid #c9b28e;
 }
 
 /* Recipient header styling */
@@ -99,6 +82,8 @@ const handleViewMatches = () => {
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 25px;
+  border: 5px solid #c9b28e;
+
 }
 
 /* Box container styling */
@@ -121,7 +106,7 @@ const handleViewMatches = () => {
   flex-direction: column;
   justify-content: space-between;
   min-height: 250px;
-  border: 1px solid #e0d4c3;
+  border: 5px solid #c9b28e;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 

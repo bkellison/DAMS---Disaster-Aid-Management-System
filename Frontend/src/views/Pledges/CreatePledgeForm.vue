@@ -12,15 +12,12 @@ const itemQty = ref('');
 const daysToShip = ref('');
 
 const categories = ref([])
-//needs to be filtered by selected category
 const items = ref([])
-
 
 const filteredItems = computed(() =>    
     Array.isArray(items.value)
         ? items.value.filter(i => i.category_id == selectedCategory.value)
         : []
-    //items.filter(i => i.category_id == selectedCategory.value)
 )
 
 async function getCategories() {
@@ -35,8 +32,6 @@ async function getCategories() {
 async function getItems() {
     try {
         const response = await axios.get('http://127.0.0.1:5000/getItems')
-        console.log('items')
-        console.log(response)
         items.value = response.data
     } catch (error) {
         console.log('/getItems failed', error)
@@ -49,87 +44,97 @@ onMounted(() => {
 })
 
 async function createPledge() {
-   
-
     const authStore = useAuthStore();
     authStore.loadUserDataFromCookie();
-    console.log(authStore.userId)
-    console.log("pledge!");
+    
     if (!selectedCategory.value || !selectedItem.value || !itemQty.value || !daysToShip.value) {
         alert("Please fill out all fields.");
         return;
     }
-    console.log(`Pledging: ${selectedCategory.value}, ${selectedItem.value}, ${itemQty.value}`);
-
+    
     // Prepare the request payload
     const createPledgeObject = {
         selected_category_id: selectedCategory.value,
         selected_item_id: selectedItem.value,
         item_quantity: itemQty.value,
         days_to_ship: daysToShip.value,
-        user_id: authStore.userId //logged in users id
+        user_id: authStore.userId
     };
-
-    console.log('made it');
 
     try {
         const response = await axios.post('http://127.0.0.1:5000/createPledge', createPledgeObject);
         router.push({ path: `/pledge-view`, replace: true });
     } catch (error) {
         console.error('Error creating pledge:', error);
-        throw error; // Throw error
+        throw error;
     }
-    //call create pledge endpoint
-    //confirmation popup and redirect to pledge page
-
 }
-
 </script>
 
 <template>
-    <div class="register-container">
-    <h1 class="register-header">Pledge</h1>
-    <p>Make a pledge by filling in the details below.</p>
-    <form @submit.prevent="createPledge">
-        <label>Category:</label>
-        <select v-model="selectedCategory" required>
-            <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
-                {{ category.category_name }}
-            </option>
-        </select>
+    <div class="pledge-form-container">
+      <div class="content-box">
+        <h1 class="pledge-form-header">Create Pledge</h1>
+        <p>Make a pledge by filling in the details below.</p>
+        
+        <form @submit.prevent="createPledge">
+          <div class="form-group">
+            <label>Category:</label>
+            <select v-model="selectedCategory" required>
+                <option value="" disabled selected>Select a category</option>
+                <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
+                    {{ category.category_name }}
+                </option>
+            </select>
+          </div>
 
-      <label>Item:</label>
-      <select v-model="selectedItem" required :disabled="selectedCategory == ''">
-        <option v-for="item in filteredItems" :key="item.item_id" :value="item.item_id">
-            {{ item.name }}
-        </option>
-      </select>
+          <div class="form-group">
+            <label>Item:</label>
+            <select v-model="selectedItem" required :disabled="selectedCategory == ''">
+              <option value="" disabled selected>Select an item</option>
+              <option v-for="item in filteredItems" :key="item.item_id" :value="item.item_id">
+                  {{ item.name }}
+              </option>
+            </select>
+          </div>
 
-      <label>Item Qty:</label>
-      <input type="number" v-model="itemQty" required :disabled="selectedItem == null"/>
+          <div class="form-group">
+            <label>Item Quantity:</label>
+            <input type="number" v-model="itemQty" required :disabled="selectedItem == null" min="1"/>
+          </div>
 
-      <label>Days To Ship:</label>
-      <input type="number" v-model="daysToShip" required :disabled="selectedItem == null"/>
+          <div class="form-group">
+            <label>Days To Ship:</label>
+            <input type="number" v-model="daysToShip" required :disabled="selectedItem == null" min="1"/>
+          </div>
 
-      <button type="submit">Make Pledge</button>
-    </form>
-  </div>
+          <button type="submit" class="submit-btn">Make Pledge</button>
+        </form>
+      </div>
+    </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
-/* Registration Page Container Styling */
-.register-container {
+.pledge-form-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C; 
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
   padding: 50px 20px;
 }
 
-/* Registration Header Styling */
-.register-header {
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
+}
+
+.pledge-form-header {
   background: #f5e1c5; 
   padding: 15px 65px; 
   border-radius: 20px;
@@ -140,14 +145,19 @@ async function createPledge() {
   margin-bottom: 20px; 
 }
 
-/* Form Styling */
 form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
-/* Label Styling */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
 label {
   font-size: 16px;
   font-weight: 500;
@@ -155,16 +165,21 @@ label {
   text-align: left;
 }
 
-/* Input and Select Styling */
 input, select {
+  width: 100%;
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #d3c0a3;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 16px;
+  background-color: white;
 }
 
-/* Button Styling */
-button {
+input:disabled, select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+.submit-btn {
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   transition: transform 0.2s ease-in-out, background-color 0.3s;
   color: white;
@@ -172,27 +187,12 @@ button {
   padding: 12px;
   border-radius: 8px;
   font-size: 18px;
+  cursor: pointer;
+  margin-top: 10px;
 }
 
-/* Button Hover Effect */
-button:hover {
+.submit-btn:hover {
   transform: scale(1.05);
   background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
-
-/* Text and Link Styling */
-p {
-  margin-top: 20px;
-}
-
-a {
-  color: #8B5E3C;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-a:hover {
-  text-decoration: underline;
-}
 </style>
-

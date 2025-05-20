@@ -22,24 +22,25 @@ const handleMatches = () => {
   <div class="donor-container">
     <div class="content-box">
       <h1 class="donor-header">Donor Dashboard</h1>
+      <p>Manage your donations and fulfill requests from recipients.</p>
 
       <div class="donor-boxes">
         <div class="donor-box">
-          <h3>Pledge</h3>
-          <p>Make and view pledges</p>
-          <button @click="handlePledge">Pledge</button>
+          <h3>Pledges</h3>
+          <p>Create and manage your donation pledges to help those in need</p>
+          <button @click="handlePledge">Manage Pledges</button>
         </div>
 
         <div class="donor-box">
           <h3>Requests</h3>
-          <p>View requests for help</p>
-          <button @click="handleRespond">Respond to Requests</button>
+          <p>View and respond to requests for help from recipients</p>
+          <button @click="handleRespond">View Requests</button>
         </div>
 
         <div class="donor-box">
           <h3>Matches</h3>
-          <p>See your matches, shipping information and status of shipments</p>
-          <button @click="handleMatches">Matches</button>
+          <p>Track matched donations, shipping information and delivery status</p>
+          <button @click="handleMatches">View Matches</button>
         </div>
       </div>
     </div>
@@ -64,7 +65,7 @@ const handleMatches = () => {
   border-radius: 15px;
   padding: 40px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid #c9b28e;
+  border: 10px solid #c9b28e;
 }
 
 .donor-header {
@@ -76,6 +77,8 @@ const handleMatches = () => {
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 25px;
+  border: 5px solid #c9b28e;
+
 }
 
 .donor-boxes {
@@ -96,7 +99,7 @@ const handleMatches = () => {
   flex-direction: column;
   justify-content: space-between;
   min-height: 250px;
-  border: 1px solid #e0d4c3;
+  border: 5px solid #c9b28e;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
