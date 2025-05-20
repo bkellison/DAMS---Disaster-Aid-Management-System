@@ -20,7 +20,7 @@ const handleMatches = () => {
 
 <template>
   <div class="donor-container">
-    <div class="donor-wrapper">
+    <div class="content-box">
       <h1 class="donor-header">Donor Dashboard</h1>
 
       <div class="donor-boxes">
@@ -53,17 +53,18 @@ const handleMatches = () => {
 .donor-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  color: #f5e1c5;
+  color: #5c4033;
   max-width: 1000px;
   margin: auto;
   padding: 50px 20px;
 }
 
-.donor-wrapper {
+.content-box {
   background-color: #5c4033;
-  padding: 50px;
-  border-radius: 12px;
-  margin-top: 40px;
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #c9b28e;
 }
 
 .donor-header {
@@ -95,6 +96,8 @@ const handleMatches = () => {
   flex-direction: column;
   justify-content: space-between;
   min-height: 250px;
+  border: 1px solid #e0d4c3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .donor-box h3 {

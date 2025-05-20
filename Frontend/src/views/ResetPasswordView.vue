@@ -1,22 +1,21 @@
 <template>
   <div class="reset-password-container">
-    <h1 class="reset-password-header">Reset Password</h1>
-    <p>Please enter your email and new password below.</p>
-    <form @submit.prevent="resetPassword">
-      <!-- <label>Email:</label>
-      <input type="email" v-model="email" required /> -->
+    <div class="content-box">
+      <h1 class="reset-password-header">Reset Password</h1>
+      <p>Please enter your email and new password below.</p>
+      <form @submit.prevent="resetPassword">
+        <label>Username:</label>
+        <input type="text" v-model="username" required />
 
-      <label>Username:</label>
-      <input type="text" v-model="username" required />
+        <label>New Password:</label>
+        <input type="password" v-model="newPassword" required />
 
-      <label>New Password:</label>
-      <input type="password" v-model="newPassword" required />
-
-      <label>Confirm Password:</label>
-      <input type="password" v-model="confirmPassword" required />
-      <button type="submit">Reset Password</button>
-    </form>
-    <p>Remember your password? <router-link to="/">Login</router-link></p>
+        <label>Confirm Password:</label>
+        <input type="password" v-model="confirmPassword" required />
+        <button type="submit">Reset Password</button>
+      </form>
+      <p>Remember your password? <router-link to="/">Login</router-link></p>
+    </div>
   </div>
 </template>
 
@@ -93,21 +92,30 @@ export default {
   text-align: center;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C; 
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
   padding: 50px 20px; 
+}
+
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
 }
 
 /* Header styling */
 .reset-password-header {
   background: #f5e1c5; 
-  padding: 15px 65px; 
+  padding: 15px 30px; 
   border-radius: 20px;
   display: inline-block;
   font-size: 32px; 
   font-weight: 600;
   color: #5c4033; 
   margin-bottom: 20px;
+  white-space: nowrap;
 }
 
 /* Form styling */
@@ -128,9 +136,10 @@ label {
 /* Input fields */
 input {
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #d3c0a3;
   border-radius: 8px;
   font-size: 18px;
+  background-color: white;
 }
 
 /* Submit button */

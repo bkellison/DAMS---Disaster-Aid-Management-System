@@ -1,34 +1,37 @@
 <template>
   <div class="event-container">
-    <h2 class="event-header">Create Disaster Event</h2>
-    <p>Please fill in the details below to register a new disaster event.</p>
-    <form @submit.prevent="submitEvent">
-      <input v-model="event.name" placeholder="Event Name" required />
-      
-      <select v-model="event.type" required>
-        <option disabled value="">Select Disaster Type</option>
-        <option>Hurricane</option>
-        <option>Earthquake</option>
-        <option>Tornado</option>
-        <option>Flood</option>
-      </select>
+    <div class="content-box">
+      <h2 class="event-header">Create Disaster Event</h2>
+      <p>Please fill in the details below to register a new disaster event.</p>
+      <form @submit.prevent="submitEvent">
+        <input v-model="event.name" placeholder="Event Name" required />
+        
+        <select v-model="event.type" required>
+          <option disabled value="">Select Disaster Type</option>
+          <option>Hurricane</option>
+          <option>Earthquake</option>
+          <option>Tornado</option>
+          <option>Flood</option>
+        </select>
 
-      <input v-model="event.location" placeholder="Location (City/State or Lat/Long)" required />
-      <label class="field-label">Start Date:</label>
-      <input type="date" v-model="event.startDate" required />
+        <input v-model="event.location" placeholder="Location (City/State or Lat/Long)" required />
+        <label class="field-label">Start Date:</label>
+        <input type="date" v-model="event.startDate" required />
 
-      <label class="field-label">End Date:</label>
-      <input type="date" v-model="event.endDate" required />
+        <label class="field-label">End Date:</label>
+        <input type="date" v-model="event.endDate" required />
 
-      <select v-model="event.categoryIds" multiple>
-        <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-          {{ cat.category_name }}
-        </option>
-      </select>
+        <label class="field-label">Select Categories:</label>
+        <select v-model="event.categoryIds" multiple>
+          <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+            {{ cat.category_name }}
+          </option>
+        </select>
+        <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
 
-
-      <button type="submit">Create Event</button>
-    </form>
+        <button type="submit">Create Event</button>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -86,6 +89,14 @@ onMounted(fetchCategories)
   padding: 50px 20px;
 }
 
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
+}
+
 .event-header {
   background: #f5e1c5;
   padding: 15px 30px;
@@ -106,16 +117,25 @@ form {
 input,
 select {
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #d3c0a3;
   border-radius: 8px;
   font-size: 16px;
+  background-color: white;
 }
 
-.multi-label {
-  font-size: 14px;
-  margin-top: 10px;
-  color: #5c4033;
+.field-label {
   text-align: left;
+  margin-bottom: -10px;
+  font-weight: 500;
+  color: #5c4033;
+}
+
+.help-text {
+  font-size: 14px;
+  margin-top: -5px;
+  color: #6A3E2B;
+  text-align: left;
+  font-style: italic;
 }
 
 button {
@@ -126,6 +146,7 @@ button {
   border-radius: 8px;
   font-size: 18px;
   transition: transform 0.2s ease-in-out, background-color 0.3s;
+  margin-top: 10px;
 }
 
 button:hover {

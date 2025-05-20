@@ -21,6 +21,7 @@ import CreateEventView from '@/views/CreateEventView.vue';
 import ManageItemsView from '@/views/ManageItemsView.vue';
 import ViewEvents from '@/views/ViewEvents.vue';
 import ShippingView from '@/views/ShippingView.vue';
+import RecipientDashboard from '@/views/RecipientDashboard.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: LoginView },
@@ -41,6 +42,7 @@ const routes = [
   { path: '/match-view', name: 'MatchesPage', component: MatchesPage, meta: { requiresAuth: true } },
   { path: '/request-view', name: 'RequestPage', component: RequestPage, meta: { requiresAuth: true } },
   { path: '/shipping/:id', name: 'ShippingView', component: ShippingView, meta: { requiresAuth: true } },
+  { path: '/recipient', name: 'Recipient', component: RecipientDashboard, meta: { requiresAuth: true } },
 
 ];
 
@@ -127,6 +129,10 @@ router.beforeEach(async (to, from, next) => {
           next();
         }
         if (to.name == 'ShippingView') {
+          next();
+        }
+        if(to.name == 'Recipient' && authStore.role == "Recipient")
+        {
           next();
         }
         

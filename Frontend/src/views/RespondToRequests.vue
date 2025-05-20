@@ -1,24 +1,25 @@
 <template>
-  <div class="response-container">
-    <h1 class="response-header">Respond to Requests</h1>
-    <p>Select a request to respond to:</p>
+  <div class="event-view-container">
+    <h2 class="event-header">Respond to Requests</h2>
+    <p>Browse the list of disaster relief requests that need your help.</p>
 
-    <div v-if="requests.length === 0">
-      <p>No requests available to respond to at the moment.</p>
-    </div>
+    <div v-if="requests.length === 0" class="no-events">No requests available at the moment.</div>
 
-    <div v-else>
-      <div v-for="request in requests" :key="request.request_id" class="request-box">
-        <h3>{{ request.event_name }} - {{ request.category_name }}</h3>
-        <p v-if="request.item_name">Specific Item: {{ request.item_name }}</p>
-        <p>Requested Quantity: {{ request.quantity }}</p>
-        <p v-if="request.details != '' && request.details != null">Details: {{ request.details }}</p>
-        <button v-if="authStore.role == 'Donor'" @click="respondToRequest(request.request_id)">Respond</button>
-        <!-- <button v-if="authStore.role == 'Recipient'" @click="respondToRequest(request.request_id)">View Request</button> -->
-        <button v-if="authStore.role == 'Admin'" @click="goToMatchForm(request.request_id)">Manual Match</button>
-        <button v-if="authStore.role == 'Admin'" @click="goToAutoMatch(request.request_id)">Auto Match</button>
-      </div>
-    </div>
+    <ul class="event-list">
+      <li v-for="request in requests" :key="request.request_id" class="event-card">
+        <h3 class="event-title">{{ request.event_name }} - {{ request.category }}</h3>
+        <p v-if="request.item_name"><strong>Specific Item:</strong> {{ request.item_name }}</p>
+        <p><strong>Requested Quantity:</strong> {{ request.quantity }}</p>
+        <p v-if="request.details && request.details.trim() !== ''"><strong>Details:</strong> {{ request.details }}</p>
+        <p><strong>Remaining Needed:</strong> {{ request.request_quantity_remaining }}</p>
+
+        <div class="button-group">
+          <button v-if="authStore.role == 'Donor'" class="action-btn" @click="respondToRequest(request.request_id)">Respond</button>
+          <button v-if="authStore.role == 'Admin'" class="action-btn" @click="goToMatchForm(request.request_id)">Manual Match</button>
+          <button v-if="authStore.role == 'Admin'" class="action-btn" @click="goToAutoMatch(request.request_id)">Auto Match</button>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -48,69 +49,88 @@ const respondToRequest = (requestId) => {
 };
 
 const goToMatchForm = (requestId) => {
-  router.push({ path: `/create-match/${requestId}`})
-}
+  router.push({ path: `/create-match/${requestId}`});
+};
 
 const goToAutoMatch = (requestId) => {
-  router.push({ path: `/auto-match/${requestId}`})
-}
+  router.push({ path: `/auto-match/${requestId}`});
+};
 </script>
 
 <style scoped>
-.response-container {
-  text-align: center;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+.event-view-container {
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C;
   max-width: 800px;
   margin: auto;
   padding: 50px 20px;
+  text-align: center;
 }
 
-.response-header {
+.event-header {
   background: #f5e1c5;
-  padding: 15px 65px;
+  padding: 15px 30px;
   border-radius: 20px;
   display: inline-block;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 20px;
 }
 
-.request-box {
-  background: #f5e1c5;
+.no-events {
+  font-size: 18px;
+  color: #777;
+  margin-top: 20px;
+}
+
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 30px;
+}
+
+.event-card {
+  background: #f9f9f9;
+  border: 1px solid #d3c0a3;
   padding: 20px;
   border-radius: 12px;
-  margin: 20px 0;
+  margin-bottom: 20px;
+  text-align: left;
+  transition: box-shadow 0.3s ease;
 }
 
-.request-box h3 {
-  font-size: 24px;
+.event-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.event-title {
+  font-size: 22px;
   font-weight: 600;
-  color: #5c4033;
-}
-
-.request-box p {
-  font-size: 16px;
-  font-weight: 400;
   color: #5c4033;
   margin-bottom: 10px;
 }
 
-.request-box button {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  margin-top: 20px;
-  margin-right: 10px;
+.button-group {
+  margin-top: 15px;
 }
 
-.request-box button:hover {
+.action-btn {
+  font-size: 14px;
+  padding: 8px 14px;
+  margin-right: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s ease;
+  background-color: #8B5E3C;
+  color: white;
+}
+
+.action-btn:hover {
+  background-color: #6A3E2B;
   transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
 </style>

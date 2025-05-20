@@ -1,40 +1,42 @@
 <template>
   <div class="register-container">
-    <h1 class="register-header">Register</h1>
-    <p>Create your account by filling in the details below.</p>
-    <form @submit.prevent="register">
-      <label>Email:</label>
-      <input type="email" v-model="email" required />
+    <div class="content-box">
+      <h1 class="register-header">Register</h1>
+      <p>Create your account by filling in the details below.</p>
+      <form @submit.prevent="register">
+        <label>Email:</label>
+        <input type="email" v-model="email" required />
 
-      <label>Username:</label>
-      <input type="text" v-model="username" required />
+        <label>Username:</label>
+        <input type="text" v-model="username" required />
 
-      <label>Password:</label>
-      <input type="password" v-model="password" required />
+        <label>Password:</label>
+        <input type="password" v-model="password" required />
 
-      <label>Role:</label>
-      <select v-model="role" required>
-        <option value="Recipient">Recipient</option>
-        <option value="Donor">Donor</option>
-        <option value="Admin">Admin</option>
-      </select>
-      
-      <label v-if="role == 'Recipient'">Address Line 1:</label>
-      <input  v-if="role == 'Recipient'" type="text" v-model="addressline1"></input>
-      <label v-if="role == 'Recipient'">Address Line 2:</label>
-      <input  v-if="role == 'Recipient'" type="text" v-model="addressline2"></input>
-      <label v-if="role == 'Recipient'">City:</label>
-      <input  v-if="role == 'Recipient'" type="text" v-model="city"></input>
-      <label v-if="role == 'Recipient'">State:</label>
-      <select v-if="role == 'Recipient'" v-model="state">
-        <option v-for="s in state_list" :key="s.abbreviation" :value="s.abbreviation">{{ s.abbreviation }}</option>
-      </select>
-      <label>Zipcode:</label>
-      <input type="text" v-model="zipcode" required></input>
-      <button type="submit">Request Account</button>
-    </form>
+        <label>Role:</label>
+        <select v-model="role" required>
+          <option value="Recipient">Recipient</option>
+          <option value="Donor">Donor</option>
+          <option value="Admin">Admin</option>
+        </select>
+        
+        <label v-if="role == 'Recipient'">Address Line 1:</label>
+        <input  v-if="role == 'Recipient'" type="text" v-model="addressline1"></input>
+        <label v-if="role == 'Recipient'">Address Line 2:</label>
+        <input  v-if="role == 'Recipient'" type="text" v-model="addressline2"></input>
+        <label v-if="role == 'Recipient'">City:</label>
+        <input  v-if="role == 'Recipient'" type="text" v-model="city"></input>
+        <label v-if="role == 'Recipient'">State:</label>
+        <select v-if="role == 'Recipient'" v-model="state">
+          <option v-for="s in state_list" :key="s.abbreviation" :value="s.abbreviation">{{ s.abbreviation }}</option>
+        </select>
+        <label>Zipcode:</label>
+        <input type="text" v-model="zipcode" required></input>
+        <button type="submit">Request Account</button>
+      </form>
 
-    <p>Already have an account? <router-link to="/">Login</router-link></p>
+      <p>Already have an account? <router-link to="/">Login</router-link></p>
+    </div>
   </div>
 </template>
 
@@ -295,7 +297,7 @@ export default {
           "name": "Wyoming",
           "abbreviation": "WY"
       }
-  ]
+    ]
     
     // Handle user registration
     async function register() {
@@ -361,9 +363,17 @@ export default {
   text-align: center;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C; 
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
   padding: 50px 20px;
+}
+
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
 }
 
 /* Registration Header Styling */
@@ -396,9 +406,10 @@ label {
 /* Input and Select Styling */
 input, select {
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #d3c0a3;
   border-radius: 8px;
   font-size: 18px;
+  background-color: white;
 }
 
 /* Button Styling */

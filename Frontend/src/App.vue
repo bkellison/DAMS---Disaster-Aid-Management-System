@@ -1,10 +1,11 @@
 <script setup>
 /* Importing RouterView from vue-router to display the matched component based on the current route */
-import { RouterView, useRouter } from 'vue-router';
+import { RouterView, useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from "@/stores/auth";
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
 authStore.loadUserDataFromCookie();
@@ -15,44 +16,109 @@ const isAdmin = computed(() => authStore.role === 'Admin');
 const isDonor = computed(() => authStore.role === 'Donor');
 const isRecipient = computed(() => authStore.role === 'Recipient');
 
+// Refs for showing/hiding contextual admin nav links
+const showEventLinks = ref(false);
+const showRequestLinks = ref(false);
+const showItemLinks = ref(false);
+
+// Watch for route changes to update nav link visibility
+watch(() => route.path, (newPath) => {
+  // For Events section
+  if (newPath.includes('/admin/view-events') || newPath.includes('/admin/create-event')) {
+    showEventLinks.value = true;
+  } else {
+    showEventLinks.value = false;
+  }
+  
+  // For Requests section
+  if (newPath.includes('/create-request') || newPath.includes('/respond-to-requests')) {
+    showRequestLinks.value = true;
+  } else {
+    showRequestLinks.value = false;
+  }
+  
+  // For Items section
+  if (newPath.includes('/admin/manage-items')) {
+    showItemLinks.value = true;
+  } else {
+    showItemLinks.value = false;
+  }
+}, { immediate: true });
 
 const handleLogout = () => {
   authStore.logout();
   router.push({ path: `/`, replace: true });
+}
+
+// Function to toggle nav sections
+const toggleEventLinks = () => {
+  showEventLinks.value = !showEventLinks.value;
+  if (showEventLinks.value) {
+    router.push('/admin/view-events');
+  }
+}
+
+const toggleRequestLinks = () => {
+  showRequestLinks.value = !showRequestLinks.value;
+  if (showRequestLinks.value) {
+    router.push('/respond-to-requests');
+  }
+}
+
+const toggleItemLinks = () => {
+  showItemLinks.value = !showItemLinks.value;
+  if (showItemLinks.value) {
+    router.push('/admin/manage-items');
+  }
 }
 </script>
 
 <template>
   <header>
     <nav>
+      <!-- Basic links for all users -->
       <template v-if="isLoggedIn">
         <router-link to="/" @click.prevent="handleLogout">Logout</router-link> |
+        <router-link to="/reset-password" active-class="active-link">Reset Password</router-link> |
       </template>
       <template v-else>
         <router-link to="/" active-class="active-link">Login</router-link> |
+        <router-link to="/register" active-class="active-link">Register</router-link> |
+        <router-link to="/reset-password" active-class="active-link">Reset Password</router-link>
       </template>
-      <router-link to="/register" active-class="active-link">Register</router-link> |
-      <router-link to="/reset-password" active-class="active-link">Reset Password</router-link>
       
-      <template v-if="isLoggedIn">
-        <template v-if="isAdmin">
-          | <router-link to="/admin" active-class="active-link">Admin</router-link>
-          | <router-link to="/admin/create-event" active-class="active-link">Create Event</router-link>
-          | <router-link to="/admin/manage-items" active-class="active-link">Manage Items</router-link>
-          | <router-link to="/admin/view-events" active-class="active-link">View Events</router-link>
-        </template>
-        <template v-if="isDonor">
-          | <router-link to="/donor" active-class="active-link">Donor</router-link>
-        </template>
-        <template v-if="isRecipient || isAdmin">
-          | <router-link to="/create-request" active-class="active-link">Create Request</router-link>
-        </template>
-        <template v-if="isRecipient">
-          | <router-link to="/match-view" active-class="active-link">Your Matches</router-link>
-        </template>
+      <!-- Admin has simplified main navigation -->
+      <template v-if="isLoggedIn && isAdmin">
+        <router-link to="/admin" active-class="active-link">Admin Dashboard</router-link>
+      </template>
+      
+      <!-- Contextual admin navigation items -->
+      <template v-if="isLoggedIn && isAdmin && showEventLinks">
+        | <router-link to="/admin/create-event" active-class="active-link">Create Event</router-link>
+        | <router-link to="/admin/view-events" active-class="active-link">View Events</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isAdmin && showRequestLinks">
+        | <router-link to="/create-request" active-class="active-link">Create Request</router-link>
+        | <router-link to="/respond-to-requests" active-class="active-link">Respond to Requests</router-link>
+      </template>
+      
+      <template v-if="isLoggedIn && isAdmin && showItemLinks">
+        | <router-link to="/admin/manage-items" active-class="active-link">Manage Items</router-link>
+      </template>
+      
+      <!-- Donor navigation -->
+      <template v-if="isLoggedIn && isDonor">
+        | <router-link to="/donor" active-class="active-link">Donor Dashboard</router-link>
+      </template>
+      
+      <!-- Recipient navigation -->
+      <template v-if="isLoggedIn && isRecipient">
+        | <router-link to="/recipient" active-class="active-link">Recipient Dashboard</router-link>
       </template>
     </nav>
   </header>
+  
   <router-view></router-view>
 </template>
 
@@ -67,7 +133,7 @@ nav {
 nav a {
   padding: 5px 10px;
   text-decoration: none;
-  color: #5c4033;
+  color: #f5e1c5;
 }
 
 /* Styling for the currently active navigation link */

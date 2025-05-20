@@ -5,12 +5,15 @@ import { useAuthStore } from "@/stores/auth";
 const router = useRouter();
 const authStore = useAuthStore();
 
-const handleManualMatch = () => {
+// Functions to navigate and set appropriate nav context
+const handleEvents = () => {
+  router.push({ path: `/admin/view-events`, replace: true });
+};
+
+const handleRequests = () => {
   router.push({ path: `/respond-to-requests`, replace: true });
 };
-const handleCreateEvent = () => {
-  router.push({ path: `/admin/create-event`, replace: true });
-};
+
 const handleManageItems = () => {
   router.push({ path: `/admin/manage-items`, replace: true });
 };
@@ -18,26 +21,26 @@ const handleManageItems = () => {
 
 <template>
   <div class="admin-container">
-    <div class="admin-wrapper">
+    <div class="content-box">
       <h1 class="admin-header">Admin Dashboard</h1>
-      <p>Manage users and system settings from here.</p>
+      <p>Manage disaster relief operations from a central hub.</p>
 
       <div class="admin-boxes">
         <div class="admin-box">
-          <h3>Match Requests and Pledges</h3>
-          <p>View requests and manually match with pledges.</p>
-          <button @click="handleManualMatch">View Requests + Match</button>
+          <h3>Event Management</h3>
+          <p>Create, view, and manage disaster events. Set up categories and locations for relief efforts.</p>
+          <button @click="handleEvents">Manage Events</button>
         </div>
 
         <div class="admin-box">
-          <h3>Create Event</h3>
-          <p>Create new events.</p>
-          <button @click="handleCreateEvent">Create Event</button>
+          <h3>Request Management</h3>
+          <p>View recipient requests and manually match them with donor pledges. Create requests on behalf of recipients.</p>
+          <button @click="handleRequests">Manage Requests</button>
         </div>
 
         <div class="admin-box">
-          <h3>Manage Items</h3>
-          <p>Add and modify new items</p>
+          <h3>Item Management</h3>
+          <p>Add, edit, and remove items that can be pledged and requested in the system.</p>
           <button @click="handleManageItems">Manage Items</button>
         </div>
       </div>
@@ -54,18 +57,19 @@ const handleManageItems = () => {
 .admin-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  color: #f5e1c5; 
+  color: #5c4033; 
   max-width: 1000px;
   margin: auto;
   padding: 50px 20px; 
 }
 
-/* Wrapper for admin content */
-.admin-wrapper {
-  background-color: #5c4033; 
-  padding: 50px; 
-  border-radius: 12px;
-  margin-top: 40px; 
+/* Content box styling */
+.content-box {
+  background-color: #5c4033;
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 10px solid #c9b28e;
 }
 
 /* Admin header styling */
@@ -78,6 +82,7 @@ const handleManageItems = () => {
   font-weight: 600;
   color: #5c4033; 
   margin-bottom: 25px; 
+  border: 5px solid #c9b28e;
 }
 
 /* Box container styling */
@@ -100,6 +105,8 @@ const handleManageItems = () => {
   flex-direction: column;
   justify-content: space-between; /* Content is spaced out evenly */
   min-height: 250px;
+  border: 5px solid #c9b28e;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* Ensures all the boxes are the same height */

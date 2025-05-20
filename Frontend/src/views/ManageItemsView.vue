@@ -1,41 +1,43 @@
 <template>
   <div class="manage-container">
-    <h2 class="manage-header">Manage Donation Items</h2>
-    <p>Add new items or remove existing ones from the list.</p>
+    <div class="content-box">
+      <h2 class="manage-header">Manage Donation Items</h2>
+      <p>Add new items or remove existing ones from the list.</p>
 
-    <form @submit.prevent="addOrUpdateItem">
-      <select v-model="newItem.category_id" required>
-        <option disabled value="">Select Category</option>
-        <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-          {{ cat.category_name }}
-        </option>
-      </select>
+      <form @submit.prevent="addOrUpdateItem">
+        <select v-model="newItem.category_id" required>
+          <option disabled value="">Select Category</option>
+          <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+            {{ cat.category_name }}
+          </option>
+        </select>
 
-      <input v-model="newItem.name" placeholder="Item Name" required />
-      <textarea v-model="newItem.description" placeholder="Description"></textarea>
-      
-      <div class="button-row">
-        <button type="submit">{{ isEditing ? 'Update Item' : 'Add Item' }}</button>
-        <button v-if="isEditing" type="button" class="cancel-btn" @click="cancelEdit">Cancel</button>
-      </div>
-    </form>
-
-    <hr class="divider" />
-
-    <div v-if="items.length === 0">No items yet.</div>
-    <ul class="item-list">
-      <li v-for="item in items" :key="item.item_id" class="item-entry">
-        <div>
-          <strong>{{ item.name }}</strong>
-          ({{ categories.find(c => c.category_id === item.category_id)?.category_name || 'Unknown' }})
-          - {{ item.quantity }}
+        <input v-model="newItem.name" placeholder="Item Name" required />
+        <textarea v-model="newItem.description" placeholder="Description"></textarea>
+        
+        <div class="button-row">
+          <button type="submit">{{ isEditing ? 'Update Item' : 'Add Item' }}</button>
+          <button v-if="isEditing" type="button" class="cancel-btn" @click="cancelEdit">Cancel</button>
         </div>
-        <div>
-          <button @click="startEditItem(item)" class="edit-btn">Edit</button>
-          <button @click="deleteItem(item.id)" class="delete-btn">Delete</button>
-        </div>
-      </li>
-    </ul>
+      </form>
+
+      <hr class="divider" />
+
+      <div v-if="items.length === 0" class="no-items">No items yet.</div>
+      <ul class="item-list">
+        <li v-for="item in items" :key="item.item_id" class="item-entry">
+          <div>
+            <strong>{{ item.name }}</strong>
+            ({{ categories.find(c => c.category_id === item.category_id)?.category_name || 'Unknown' }})
+            - {{ item.quantity }}
+          </div>
+          <div>
+            <button @click="startEditItem(item)" class="edit-btn">Edit</button>
+            <button @click="deleteItem(item.id)" class="delete-btn">Delete</button>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -106,7 +108,6 @@ const startEditItem = (item) => {
   }
 }
 
-
 onMounted(() => {
   fetchItems()
   fetchCategories()
@@ -123,6 +124,14 @@ onMounted(() => {
   max-width: 600px;
   margin: auto;
   padding: 50px 20px;
+}
+
+.content-box {
+  background-color: #f9f3e8;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0d4c3;
 }
 
 .manage-header {
@@ -147,11 +156,12 @@ input,
 select,
 textarea {
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #d3c0a3;
   border-radius: 8px;
   font-size: 16px;
   width: 100%;
   box-sizing: border-box;
+  background-color: white;
 }
 
 button {
@@ -173,7 +183,7 @@ button:hover {
   margin: 30px 0;
   border: none;
   height: 1px;
-  background-color: #ccc;
+  background-color: #d3c0a3;
 }
 
 .item-list {
@@ -186,33 +196,41 @@ button:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #ddd;
+  padding: 15px;
+  border-bottom: 1px solid #d3c0a3;
+  background-color: white;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .delete-btn {
-  color: #e63946;
-  background: none;
+  background: #e63946;
+  color: white;
   border: none;
-  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
   cursor: pointer;
 }
 
 .delete-btn:hover {
-  text-decoration: underline;
+  background: #c82333;
 }
 
 .edit-btn {
-  color: #007bff;
-  background: none;
+  background: #0077cc;
+  color: white;
   border: none;
-  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
   cursor: pointer;
   margin-right: 10px;
 }
 
 .edit-btn:hover {
-  text-decoration: underline;
+  background: #005fa3;
 }
 
 .button-row {
@@ -236,4 +254,12 @@ button:hover {
   background-color: #bbb;
 }
 
+.no-items {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  color: #8B5E3C;
+  font-style: italic;
+  border: 1px dashed #d3c0a3;
+}
 </style>
