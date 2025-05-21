@@ -4,265 +4,159 @@
       <h2 class="event-header">All Disaster Events</h2>
       <p class="description">Browse the list of all created disaster events below.</p>
 
-      <div class="action-button-container">
-        <button @click="goToCreateEvent" class="create-btn">+ Create New Event</button>
-      </div>
+      <div v-if="events.length === 0" class="no-events">No events found.</div>
 
-      <div v-if="loading" class="loading-indicator">
-        Loading events...
-      </div>
-
-      <div v-else-if="events.length === 0" class="no-events">No events found.</div>
-
-      <ul v-else class="event-list">
+      <ul class="event-list">
         <li v-for="event in events" :key="event.event_id" class="event-card">
           <h3 class="event-title">{{ event.name }}</h3>
-          <p><strong>Categories:</strong> {{ getEventCategories(event) }}</p>
+          <p><strong>Categories:</strong> {{ event.categories.join(', ') }}</p>
           <p><strong>Location:</strong> {{ event.location }}</p>
           <p>
-            <strong>Start:</strong> {{ formatDate(event.start_date) }} |
-            <strong>End:</strong> {{ formatDate(event.end_date) }}
+            <strong>Start:</strong> {{ event.start_date }} |
+            <strong>End:</strong> {{ event.end_date }}
           </p>
           <p><strong>Status:</strong> {{ event.is_active ? 'Active' : 'Inactive' }}</p>
 
           <div class="button-group">
             <button @click="editEvent(event)" class="edit-btn">Edit</button>
-            <button @click="confirmDelete(event)" class="delete-btn">Delete</button>
+            <button @click="deleteEvent(event.event_id)" class="delete-btn">Delete</button>
           </div>
         </li>
       </ul>
     </div>
+  </div>
   
-    <!-- Edit Event Modal -->
-    <div v-if="selectedEvent" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
-        <h3>Edit Event</h3>
-        <form @submit.prevent="updateEvent">
-          <div class="form-group">
-            <label for="event-name">Event Name:</label>
-            <input id="event-name" v-model="selectedEvent.name" placeholder="Event Name" required />
-          </div>
-          
-          <div class="form-group">
-            <label for="event-location">Location:</label>
-            <input id="event-location" v-model="selectedEvent.location" placeholder="Location" required />
-          </div>
-          
-          <div class="form-group date-group">
-            <div>
-              <label for="start-date">Start Date:</label>
-              <input id="start-date" type="date" v-model="selectedEvent.start_date" required />
-            </div>
-            <div>
-              <label for="end-date">End Date:</label>
-              <input id="end-date" type="date" v-model="selectedEvent.end_date" required />
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Categories:</label>
-            <select v-model="selectedEvent.categoryIds" multiple>
-              <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-                {{ cat.category_name }}
-              </option>
-            </select>
-            <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
-          </div>
-
-          <div class="modal-buttons">
-            <button type="submit" class="save-btn">Save Changes</button>
-            <button type="button" class="cancel-btn" @click="closeModal">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Confirm Delete Modal -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
-      <div class="modal confirm-modal">
-        <h3>Confirm Delete</h3>
-        <p>Are you sure you want to delete the event "{{ eventToDelete?.name }}"?</p>
-        <p class="warning-text">This action cannot be undone.</p>
-        
-        <div class="modal-buttons">
-          <button @click="confirmDeleteAction" class="delete-btn">Delete</button>
-          <button @click="cancelDelete" class="cancel-btn">Cancel</button>
+  <!-- Edit Event Modal -->
+  <div v-if="selectedEvent" class="modal-overlay" @click.self="closeModal">
+    <div class="modal">
+      <h3>Edit Event</h3>
+      <form @submit.prevent="updateEvent">
+        <div class="form-group">
+          <label for="event-name">Event Name:</label>
+          <input id="event-name" v-model="selectedEvent.name" placeholder="Event Name" required />
         </div>
-      </div>
+        
+        <div class="form-group">
+          <label for="event-location">Location:</label>
+          <input id="event-location" v-model="selectedEvent.location" placeholder="Location" required />
+        </div>
+        
+        <div class="form-group date-group">
+          <div>
+            <label for="start-date">Start Date:</label>
+            <input id="start-date" type="date" v-model="selectedEvent.start_date" required />
+          </div>
+          <div>
+            <label for="end-date">End Date:</label>
+            <input id="end-date" type="date" v-model="selectedEvent.end_date" required />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Categories:</label>
+          <select v-model="selectedEvent.categoryIds" multiple>
+            <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+              {{ cat.category_name }}
+            </option>
+          </select>
+          <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
+        </div>
+
+        <div class="modal-buttons">
+          <button type="submit" class="save-btn">Save Changes</button>
+          <button type="button" class="cancel-btn" @click="closeModal">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
 
-<script>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import axios from 'axios';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import axios from 'axios'
 
-export default {
-  name: 'ViewEvents',
-  setup() {
-    const router = useRouter();
-    const authStore = useAuthStore();
-    
-    // State
-    const events = ref([]);
-    const categories = ref([]);
-    const selectedEvent = ref(null);
-    const showDeleteConfirm = ref(false);
-    const eventToDelete = ref(null);
-    const loading = ref(true);
-    
-    // Format date for display
-    const formatDate = (dateStr) => {
-      if (!dateStr) return 'N/A';
-      return new Date(dateStr).toLocaleDateString();
-    };
-    
-    // Get comma-separated list of categories
-    const getEventCategories = (event) => {
-      if (!event.categories || !event.categories.length) return 'None';
-      return event.categories.join(', ');
-    };
-    
-    // Close modal and reset selected event
-    const closeModal = () => {
-      selectedEvent.value = null;
-    };
-    
-    // Navigate to create event page
-    const goToCreateEvent = () => {
-      router.push('/admin/create-event');
-    };
-    
-    // Fetch events from API
-    const fetchEvents = async () => {
-      try {
-        console.log('Fetching events with auth role:', authStore.role);
-        loading.value = true;
-        
-        let url = '/api/admin/events';
-        if (authStore.isAdmin) {
-          console.log('Using admin endpoint');
-        }
-        
-        const res = await axios.get(url);
-        console.log('Admin events fetched:', res.data);
-        events.value = res.data;
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        if (error.response) {
-          console.error('Response data:', error.response.data);
-          console.error('Response status:', error.response.status);
-        }
-      } finally {
-        loading.value = false;
-      }
-    };
-    
-    // Fetch categories for event editing
-    const fetchCategories = async () => {
-      try {
-        const res = await axios.get('/api/categories');
-        categories.value = res.data;
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    
-    // Handle delete event
-    const confirmDelete = (event) => {
-      eventToDelete.value = event;
-      showDeleteConfirm.value = true;
-    };
-    
-    const cancelDelete = () => {
-      eventToDelete.value = null;
-      showDeleteConfirm.value = false;
-    };
-    
-    const confirmDeleteAction = async () => {
-      if (!eventToDelete.value) return;
-      
-      try {
-        await axios.delete(`/api/admin/events/${eventToDelete.value.event_id}`);
-        await fetchEvents(); // Refresh list
-        cancelDelete(); // Close modal
-      } catch (err) {
-        console.error('Failed to delete event:', err);
-        alert('Failed to delete event: ' + (err.response?.data?.error || err.message));
-      }
-    };
-    
-    // Handle edit event
-    const editEvent = async (event) => {
-      try {
-        // Get category IDs for this event
-        const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`);
-        const categoryIds = categoryRes.data.map(cat => cat.category_id);
-    
-        selectedEvent.value = {
-          ...event,
-          categoryIds
-        };
-      } catch (error) {
-        console.error('Error fetching event categories:', error);
-        alert('Could not load event categories');
-      }
-    };
-    
-    const updateEvent = async () => {
-      try {
-        await axios.put(`/api/admin/events/${selectedEvent.value.event_id}`, selectedEvent.value);
-        await fetchEvents();
-        selectedEvent.value = null;
-        alert('Event updated successfully!');
-      } catch (error) {
-        console.error('Update failed:', error);
-        alert('Update failed: ' + (error.response?.data?.error || error.message));
-      }
-    };
-    
-    // Handle escape key to close modals
-    const handleEscKey = (e) => {
-      if (e.key === 'Escape') {
-        if (selectedEvent.value) closeModal();
-        if (showDeleteConfirm.value) cancelDelete();
-      }
-    };
-    
-    // Set up event listeners on mount
-    onMounted(() => {
-      console.log('ViewEvents component mounted');
-      fetchEvents();
-      fetchCategories();
-      document.addEventListener('keydown', handleEscKey);
-    });
-    
-    // Clean up event listeners when component is unmounted
-    onBeforeUnmount(() => {
-      document.removeEventListener('keydown', handleEscKey);
-    });
-    
-    return {
-      events,
-      categories,
-      selectedEvent,
-      showDeleteConfirm,
-      eventToDelete,
-      loading,
-      formatDate,
-      getEventCategories,
-      closeModal,
-      goToCreateEvent,
-      confirmDelete,
-      cancelDelete,
-      confirmDeleteAction,
-      editEvent,
-      updateEvent
-    };
+const events = ref([])
+const categories = ref([])
+const selectedEvent = ref(null)
+
+// Close modal and reset selected event
+const closeModal = () => {
+  selectedEvent.value = null;
+}
+
+const fetchEvents = async () => {
+  try {
+    const res = await axios.get('/api/admin/events')
+    events.value = res.data
+  } catch (error) {
+    console.error('Error fetching events:', error)
   }
 }
+
+const fetchCategories = async () => {
+  try {
+    const res = await axios.get('/api/categories')
+    categories.value = res.data
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  }
+}
+
+const deleteEvent = async (id) => {
+  if (confirm("Are you sure you want to delete this event?")) {
+    try {
+      await axios.delete(`/api/admin/events/${id}`);
+      await fetchEvents(); // Refresh list
+    } catch (err) {
+      alert("Failed to delete event: " + err.message);
+    }
+  }
+};
+
+const editEvent = async (event) => {
+  try {
+    // Get category IDs for this event
+    const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`)
+    const categoryIds = categoryRes.data.map(cat => cat.category_id)
+
+    selectedEvent.value = {
+      ...event,
+      categoryIds
+    }
+  } catch (error) {
+    console.error('Error fetching event categories:', error)
+    alert('Could not load event categories')
+  }
+}
+
+const updateEvent = async () => {
+  try {
+    await axios.put(`/api/admin/events/${selectedEvent.value.event_id}`, selectedEvent.value)
+    await fetchEvents()
+    selectedEvent.value = null
+    alert('Event updated successfully!')
+  } catch (error) {
+    alert('Update failed: ' + error.message)
+  }
+}
+
+// Handle escape key to close modal
+const handleEscKey = (e) => {
+  if (e.key === 'Escape' && selectedEvent.value) {
+    closeModal();
+  }
+}
+
+// Clean up any event listeners when component is unmounted
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscKey);
+});
+
+onMounted(() => {
+  fetchEvents()
+  fetchCategories()
+  document.addEventListener('keydown', handleEscKey);
+})
 </script>
 
 <style scoped>
@@ -278,7 +172,7 @@ export default {
 }
 
 .description {
-  color: #8B5E3C; 
+  color: #6c757d; 
   font-size: 16px;
   margin-bottom: 20px;
 }
@@ -302,28 +196,7 @@ export default {
   margin-bottom: 20px;
 }
 
-.action-button-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
-}
-
-.create-btn {
-  background: #2e8b57;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.create-btn:hover {
-  background: #236b43;
-}
-
-.no-events, .loading-indicator {
+.no-events {
   font-size: 18px;
   color: #777;
   margin-top: 20px;
@@ -371,9 +244,7 @@ export default {
 }
 
 .edit-btn,
-.delete-btn,
-.save-btn,
-.cancel-btn {
+.delete-btn {
   font-size: 16px;
   padding: 8px 16px;
   border: none;
@@ -383,22 +254,22 @@ export default {
 }
 
 .edit-btn {
-  background-color: #4a90e2;
+  background: linear-gradient(135deg, #4a90e2, #3a7bc8);
   color: white;
 }
 
 .edit-btn:hover {
-  background-color: #3a7bc8;
+  background: linear-gradient(135deg, #3a7bc8, #4a90e2);
   transform: scale(1.05);
 }
 
 .delete-btn {
-  background-color: #e63946;
+  background: linear-gradient(135deg, #e63946, #c82333);
   color: white;
 }
 
 .delete-btn:hover {
-  background-color: #c82333;
+  background: linear-gradient(135deg, #c82333, #e63946);
   transform: scale(1.05);
 }
 
@@ -481,6 +352,18 @@ export default {
   margin-top: 25px;
 }
 
+.save-btn,
+.cancel-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, 0.3s ease;
+  min-width: 120px;
+}
+
 .save-btn {
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   color: white;
@@ -498,16 +381,5 @@ export default {
 
 .cancel-btn:hover {
   background: #d0d0d0;
-}
-
-.confirm-modal {
-  max-width: 400px;
-  text-align: center;
-}
-
-.warning-text {
-  color: #e63946;
-  margin-top: 10px;
-  font-weight: 500;
 }
 </style>

@@ -2,6 +2,8 @@
   <div class="response-detail-container">
     <div class="content-box">
       <h1 class="response-detail-header">{{ isEditing ? 'Edit Response' : 'Respond to Request' }}</h1>
+      <p class="description">Please review the request details and provide your response.</p>
+      
       <div v-if="requestDetails" class="request-info">
         <div class="info-section">
           <h3>{{ requestDetails.event_name }} - {{ requestDetails.category }}</h3>
@@ -36,13 +38,15 @@
               placeholder="Describe your response..."></textarea>
           </div>
 
-          <button @click="submitResponse" class="submit-btn">
-            {{ isEditing ? 'Update Response' : 'Submit Response' }}
-          </button>
-          
-          <button @click="goBack" class="back-btn">
-            Cancel
-          </button>
+          <div class="button-row">
+            <button @click="submitResponse" class="submit-btn">
+              {{ isEditing ? 'Update Response' : 'Submit Response' }}
+            </button>
+            
+            <button @click="goBack" class="back-btn">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
       <div v-else class="loading">
@@ -177,6 +181,11 @@ const goBack = () => {
   font-size: 32px;
   font-weight: 600;
   color: #5c4033;
+  margin-bottom: 15px;
+}
+
+.description {
+  color: #6c757d;
   margin-bottom: 30px;
 }
 
@@ -222,6 +231,11 @@ const goBack = () => {
   font-size: 16px;
 }
 
+.button-row {
+  display: flex;
+  gap: 15px;
+}
+
 input, textarea {
   width: 100%;
   padding: 12px;
@@ -238,7 +252,6 @@ input, textarea {
   font-size: 18px;
   cursor: pointer;
   transition: transform 0.2s ease-in-out, background-color 0.3s;
-  margin-right: 10px;
   border: none;
 }
 

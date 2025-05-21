@@ -47,39 +47,42 @@ const getStatusClass = (status) => {
     <div class="match-container">
       <div class="match-wrapper">
         <h1 class="match-header">Matches View</h1>
+        <p class="description">Track matched donations, shipping information and delivery status.</p>
 
-        <table class="match-table">
-            <thead>
-                <tr>
-                    <th>Event</th>
-                    <th>Category</th>
-                    <th>Item</th>
-                    <th>Count</th>
-                    <th>Match Status</th>
-                    <th>Shipping Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(match, index) in matches" :key="index">
-                    <td>{{ match.event_name }}</td>
-                    <td>{{ match.category_name }}</td>
-                    <td>{{ match.item_name }}</td>
-                    <td>{{ match.match_quantity }}</td>
-                    <td>{{ match.match_status }}</td>
-                    <td>
-                      <span :class="getStatusClass(match.shipping_status)">
-                        {{ match.shipping_status || 'pending' }}
-                      </span>
-                    </td>
-                    <td>
-                      <button @click="viewShippingDetails(match)" class="action-btn">
-                        {{ match.shipping_status === 'pending' ? 'Update Shipping' : 'View Shipping' }}
-                      </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-container">
+          <table class="match-table">
+              <thead>
+                  <tr>
+                      <th>Event</th>
+                      <th>Category</th>
+                      <th>Item</th>
+                      <th>Count</th>
+                      <th>Match Status</th>
+                      <th>Shipping Status</th>
+                      <th>Actions</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr v-for="(match, index) in matches" :key="index">
+                      <td>{{ match.event_name }}</td>
+                      <td>{{ match.category_name }}</td>
+                      <td>{{ match.item_name }}</td>
+                      <td>{{ match.match_quantity }}</td>
+                      <td>{{ match.match_status }}</td>
+                      <td>
+                        <span :class="getStatusClass(match.shipping_status)">
+                          {{ match.shipping_status || 'pending' }}
+                        </span>
+                      </td>
+                      <td>
+                        <button @click="viewShippingDetails(match)" class="action-btn">
+                          {{ match.shipping_status === 'pending' ? 'Update Shipping' : 'View Shipping' }}
+                        </button>
+                      </td>
+                  </tr>
+              </tbody>
+          </table>
+        </div>
       </div>
     </div>
 </template>
@@ -102,7 +105,6 @@ const getStatusClass = (status) => {
     border-radius: 12px;
     margin-top: 40px; 
     border: 10px solid #c9b28e;
-
 }
   
 .match-header {
@@ -113,9 +115,20 @@ const getStatusClass = (status) => {
     font-size: 32px; 
     font-weight: 600;
     color: #5c4033; 
-    margin-bottom: 25px; 
+    margin-bottom: 15px; 
     border: 5px solid #c9b28e;
+}
 
+.description {
+    color: #f5e1c5;
+    font-size: 16px;
+    margin-bottom: 30px;
+}
+
+.table-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 .match-table {
@@ -123,28 +136,25 @@ const getStatusClass = (status) => {
     margin-top: 30px;
     border-collapse: collapse;
     border: 5px solid #c9b28e;
-
 }
 
 .match-table th,
 .match-table td {
     padding: 12px 16px;
     border-bottom: 1px solid #ddd;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .match-table th {
     background-color: #f5e1c5;
     color: #5c4033;
     text-align: left;
-    
 }
 
 .match-table td {
     background-color: #fdf6ee;
     color: #5c4033;
     text-align: left;
-    
 }
 
 .action-btn {
@@ -152,7 +162,7 @@ const getStatusClass = (status) => {
     color: white;
     border: none;
     padding: 8px 16px;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 14px;
     cursor: pointer;
     transition: transform 0.2s ease-in-out, background-color 0.3s;

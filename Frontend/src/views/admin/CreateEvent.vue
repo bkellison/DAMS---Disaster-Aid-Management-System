@@ -2,7 +2,7 @@
   <div class="event-container">
     <div class="content-box">
       <h2 class="event-header">Create Disaster Event</h2>
-      <p>Please fill in the details below to register a new disaster event.</p>
+      <p class="description">Please fill in the details below to register a new disaster event.</p>
       <form @submit.prevent="submitEvent">
         <input v-model="event.name" placeholder="Event Name" required />
         
@@ -29,7 +29,7 @@
         </select>
         <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
 
-        <button type="submit">Create Event</button>
+        <button type="submit" class="submit-btn">Create Event</button>
       </form>
     </div>
   </div>
@@ -83,19 +83,22 @@ onMounted(fetchCategories)
 .event-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  color: #8B5E3C;
-  max-width: 500px;
+  color: #5c4033;
+  max-width: 750px; /* Increased to match content-box width */
   margin: auto;
   padding: 50px 20px;
+  display: flex;
+  justify-content: center; /* Center horizontally */
 }
 
 .content-box {
   background-color: #f9f3e8;
   border-radius: 15px;
-  padding: 30px;
+  padding: 40px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
-  width: 500px
+  width: 100%; 
+  max-width: 750px; 
 }
 
 .event-header {
@@ -106,13 +109,19 @@ onMounted(fetchCategories)
   font-size: 28px;
   font-weight: 600;
   color: #5c4033;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+}
+
+.description {
+  color: #6c757d;
+  margin-bottom: 30px;
 }
 
 form {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  text-align: left;
 }
 
 input,
@@ -122,6 +131,7 @@ select {
   border-radius: 8px;
   font-size: 16px;
   background-color: white;
+  width: 100%;
 }
 
 .field-label {
@@ -134,12 +144,12 @@ select {
 .help-text {
   font-size: 14px;
   margin-top: -5px;
-  color: #6A3E2B;
+  color: #6c757d;
   text-align: left;
   font-style: italic;
 }
 
-button {
+.submit-btn {
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   color: white;
   border: none;
@@ -148,9 +158,10 @@ button {
   font-size: 18px;
   transition: transform 0.2s ease-in-out, background-color 0.3s;
   margin-top: 10px;
+  cursor: pointer;
 }
 
-button:hover {
+.submit-btn:hover {
   transform: scale(1.05);
   background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }

@@ -70,7 +70,7 @@ const goToAutoMatch = (requestId) => {
 }
 
 .description {
-  color: #8B5E3C; 
+  color: #6c757d; 
   font-size: 16px;
   margin-bottom: 20px;
 }
@@ -136,15 +136,15 @@ const goToAutoMatch = (requestId) => {
 }
 
 .action-btn {
-  font-size: 16px;
-  padding: 10px 18px;
-  margin-right: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.3s ease;
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
   color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, background-color 0.3s;
+  margin-right: 10px;
 }
 
 .action-btn:hover {
@@ -155,6 +155,5 @@ const goToAutoMatch = (requestId) => {
 .request-card p {
   margin: 10px 0;
   line-height: 1.5;
-  
 }
 </style>
