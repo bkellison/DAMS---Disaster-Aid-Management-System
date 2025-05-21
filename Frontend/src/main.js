@@ -1,16 +1,23 @@
+// src/main.js
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
-import { createPinia } from 'pinia';
-import { useAuthStore } from "@/stores/auth";
-import axios from 'axios'
+import axios from 'axios';
 
+// Create the app instance
 const app = createApp(App);
-app.use(createPinia());
+
+// Set up axios defaults
+axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.withCredentials = true; // Enable cookies for cross-origin requests
+
+// Use Pinia for state management
+const pinia = createPinia();
+app.use(pinia);
+
+// Use the router
 app.use(router);
-axios.defaults.baseURL = 'http://localhost:5000'
 
-
-// const authStore = useAuthStore();
-// authStore.checkAuth();  // Check authentication on startup
+// Mount the app
 app.mount('#app');

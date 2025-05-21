@@ -65,37 +65,60 @@ def request_new_account():
 def login():
     db = get_db()
     data_payload = request.get_json()    
+    print("Received login request with payload:", data_payload)
 
     try:
         username = data_payload.get("username")
         password = data_payload.get("password")
 
+        print(f"Processing login for username: {username}")
+
         #Verify valid inputs
         if not username or not password:
-            return jsonify({"error": "Missing requird fields"}), 400
+            print("Missing required fields")
+            return jsonify({"error": "Missing required fields"}), 400
         
         #Check if user exists
         existing_user_query = text("SELECT * FROM user WHERE is_approved = 1 AND username = :username")
         existing_user = db.session.execute(existing_user_query, {"username": username}).fetchone()
 
         if not existing_user:
-            #Return error if username already exists
+            print(f"User not found: {username}")
             return jsonify({"error": "User does not exist"}), 401
+        
+        print(f"User found: {username}, checking password")
         
         #Check for correct password
         if bcrypt.checkpw(password.encode('utf-8'), existing_user.password):
-            claims = {"user_id": existing_user.user_id, "username": username, "role": existing_user.role, "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)}
+            claims = {
+                "user_id": existing_user.user_id, 
+                "username": username, 
+                "role": existing_user.role, 
+                "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
+            }
             token = jwt.encode(claims, SECRET_KEY, algorithm="HS256") 
 
-            response = make_response(claims)# make_response(jsonify({"message": "Login successfull"}))
-            response.set_cookie("jwt_token", token, httponly=True, secure=True)
-            return response, 200
+            # Properly format response as JSON
+            response = make_response(jsonify(claims))
+            response.set_cookie("jwt_token", token, httponly=True, secure=False, samesite="Lax")
+            
+            # Add CORS headers if needed
+            response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+            response.headers.add("Access-Control-Allow-Credentials", "true")
+            
+            print(f"Login successful for {username}, role: {existing_user.role}")
+            print(f"Response data: {claims}")
+            return response
         else:
-            return jsonify({"message": "Invalid credentials"}), 401
+            print(f"Invalid password for {username}")
+            return jsonify({"error": "Invalid credentials"}), 401
     except SQLAlchemyError as ex:
+        print(f"Database error: {ex}")
+        db.session.rollback()
         # Handle database errors
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:   
+    except Exception as ex:
+        print(f"Internal server error: {ex}")
         # Handle other errors
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     

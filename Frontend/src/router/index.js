@@ -1,150 +1,222 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Cookies from 'js-cookie';
-import axios from "@/axios"; 
 import { useAuthStore } from '@/stores/auth';
-import LoginView from '@/views/LoginView.vue';
-import RegisterView from '@/views/RegisterView.vue';
-import AdminView from '@/views/AdminView.vue';
-import ResetPasswordView from '@/views/ResetPasswordView.vue';
-import HomePage from '@/views/HomePage.vue';
-import DonorPage from '@/views/DonorLandingPage.vue';
-import PledgePage from '@/views/Pledges/PledgeView.vue';
-import CreatePledge from '@/views/Pledges/CreatePledgeForm.vue';
-import CreateMatch from '@/views/Matches/ManualMatchForm.vue';
-import AutoMatch from '@/views/Matches/AutoMatch.vue';
-import RespondToRequests from '@/views/RespondToRequests.vue';
-import RespondPage from '@/views/RespondPage.vue';
-import CreateRequestView from '@/views/CreateRequestView.vue';
-import MatchesPage from '@/views/Matches/MatchView.vue';
-import RequestPage from '@/views/Requests/RequestsView.vue';
-import CreateEventView from '@/views/CreateEventView.vue';
-import ManageItemsView from '@/views/ManageItemsView.vue';
-import ViewEvents from '@/views/ViewEvents.vue';
-import ShippingView from '@/views/ShippingView.vue';
-import RecipientDashboard from '@/views/RecipientDashboard.vue';
 
+// Auth routes
+import Login from '@/views/auth/Login.vue';
+import Register from '@/views/auth/Register.vue';
+import ResetPassword from '@/views/auth/ResetPassword.vue';
+// Admin routes
+import AdminDashboard from '@/views/admin/AdminDashboard.vue';
+import CreateEvent from '@/views/admin/CreateEvent.vue';
+import ManageItems from '@/views/admin/ManageItems.vue';
+import ViewEvents from '@/views/admin/ViewEvents.vue';
+
+// Donor routes
+import DonorDashboard from '@/views/donor/DonorDashboard.vue';
+import PledgeView from '@/views/donor/PledgeView.vue';
+import CreatePledgeForm from '@/views/donor/CreatePledgeForm.vue';
+
+// Recipient routes
+import RecipientDashboard from '@/views/recipient/RecipientDashboard.vue';
+import RequestView from '@/views/recipient/RequestView.vue';
+
+// Shared routes
+import CreateRequest from '@/views/shared/CreateRequest.vue';
+import RespondToRequests from '@/views/shared/RespondToRequests.vue';
+import RespondPage from '@/views/shared/RespondPage.vue';
+import MatchView from '@/views/shared/MatchView.vue';
+import ShippingInfo from '@/views/shared/ShippingInfo.vue';
+import AutoMatch from '@/views/shared/AutoMatch.vue';
+import ManualMatchForm from '@/views/shared/ManualMatchForm.vue';
+
+// Define routes
 const routes = [
-  { path: '/', name: 'Login', component: LoginView },
-  { path: '/register', name: 'Register', component: RegisterView },
-  { path: '/reset-password', name: 'ResetPassword', component: ResetPasswordView },
-  { path: '/admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true } },
-  { path: '/admin/create-event', name: 'CreateEvent', component: CreateEventView, meta: { requiresAuth: true } },
-  { path: '/admin/manage-items', name: 'ManageItems', component: ManageItemsView, meta: { requiresAuth: true } },
-  { path: '/admin/view-events', name: 'ViewEvents', component: ViewEvents, meta: { requiresAuth: true } },
-  { path: '/donor', name: 'Donor', component: DonorPage, meta: { requiresAuth: true } },
-  { path: '/pledge-view', name: 'Pledges', component: PledgePage, meta: { requiresAuth: true } },
-  { path: '/create-pledge', name: 'CreatePledge', component: CreatePledge, meta: { requiresAuth: true } },
-  { path: '/respond-to-requests', name: 'RespondToRequests', component: RespondToRequests, meta: { requiresAuth: true } },
-  { path: '/respond/:id', name: 'RespondPage', component: RespondPage, meta: { requiresAuth: true } },
-  { path: '/create-request', name: 'CreateRequest', component: CreateRequestView, meta: { requiresAuth: true } },
-  { path: '/create-match/:id', name: 'CreateMatch', component: CreateMatch, meta: { requiresAuth: true } },
-  { path: '/auto-match/:id', name: 'AutoMatch', component: AutoMatch, meta: { requiresAuth: true } },
-  { path: '/match-view', name: 'MatchesPage', component: MatchesPage, meta: { requiresAuth: true } },
-  { path: '/request-view', name: 'RequestPage', component: RequestPage, meta: { requiresAuth: true } },
-  { path: '/shipping/:id', name: 'ShippingView', component: ShippingView, meta: { requiresAuth: true } },
-  { path: '/recipient', name: 'Recipient', component: RecipientDashboard, meta: { requiresAuth: true } },
-
+  // Auth routes (public)
+  {
+    path: '/',
+    name: 'login',
+    component: Login,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: Register,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: ResetPassword,
+    meta: { requiresAuth: false }
+  },
+  
+  // Admin routes
+  {
+    path: '/admin',
+    name: 'admin',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  {
+    path: '/admin/create-event',
+    name: 'create-event',
+    component: CreateEvent,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  {
+    path: '/admin/manage-items',
+    name: 'manage-items',
+    component: ManageItems,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  {
+    path: '/admin/view-events',
+    name: 'view-events',
+    component: ViewEvents,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  
+  // Donor routes
+  {
+    path: '/donor',
+    name: 'donor',
+    component: DonorDashboard,
+    meta: { requiresAuth: true, roles: ['Donor'] }
+  },
+  {
+    path: '/pledge-view',
+    name: 'pledges',
+    component: PledgeView,
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+  },
+  {
+    path: '/create-pledge',
+    name: 'create-pledge',
+    component: CreatePledgeForm,
+    meta: { requiresAuth: true, roles: ['Donor'] }
+  },
+  
+  // Recipient routes
+  {
+    path: '/recipient',
+    name: 'recipient',
+    component: RecipientDashboard,
+    meta: { requiresAuth: true, roles: ['Recipient'] }
+  },
+  {
+    path: '/request-view',
+    name: 'requests',
+    component: RequestView,
+    meta: { requiresAuth: true, roles: ['Recipient', 'Admin'] }
+  },
+  
+  // Shared routes (roles managed at the component level)
+  {
+    path: '/create-request',
+    name: 'create-request',
+    component: CreateRequest,
+    meta: { requiresAuth: true, roles: ['Recipient', 'Donor', 'Admin'] }
+  },
+  {
+    path: '/respond-to-requests',
+    name: 'respond-to-requests',
+    component: RespondToRequests,
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+  },
+  {
+    path: '/respond/:id',
+    name: 'respond-page',
+    component: RespondPage,
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+  },
+  {
+    path: '/match-view',
+    name: 'matches',
+    component: MatchView,
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+  },
+  {
+    path: '/shipping/:id',
+    name: 'shipping',
+    component: ShippingInfo,
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+  },
+  {
+    path: '/create-match/:id',
+    name: 'create-match',
+    component: ManualMatchForm,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  {
+    path: '/auto-match/:id',
+    name: 'auto-match',
+    component: AutoMatch,
+    meta: { requiresAuth: true, roles: ['Admin'] }
+  },
+  
+  // Catch-all route (404)
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
 ];
 
+// Create router instance
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // Scroll to top on navigation
+    return savedPosition || { top: 0 };
+  }
 });
 
-/* Will uncomment once auhtoization features work */
-
-// Add route guard to check authentication for protected routes (like Admin)
-router.beforeEach(async (to, from, next) => {
-  const isAuthenticated = false; // Replace with actual auth check
+// Navigation guard
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore();
+  authStore.loadUserDataFromCookie();
+  
+  // Check if the route requires authentication
   if (to.meta.requiresAuth) {
-    try {
-      console.log("to")
-      console.log(to)
-      console.log(from)
-      //const response = await axios.get("http://127.0.0.1:5000/auth/status");
-      // console.log(response)      
-      const authStore = useAuthStore();
-      authStore.loadUserDataFromCookie();
-      console.log(authStore.userId); 
-      console.log(authStore.role)
-      if (authStore.userId != null) {
-        if(to.name == 'Admin' && authStore.role == "Admin")
-        {
-          next();
-        }
-        if(to.name == 'Donor' && authStore.role == "Donor")
-        {
-          next();
-        }
-        if(to.name == 'CreatePledge' && authStore.role == "Donor")
-        {
-          next();
-        }
-        if(to.name == 'Pledges' && (authStore.role == "Donor" || authStore.role == "Admin"))
-        {
-          next();
-        }
-        if (to.name == 'CreateRequest' && (authStore.role == "Recipient" || authStore.role == "Donor" || authStore.role == "Admin")) 
-        {
-          next();
-        }
-        if (to.name == 'RespondToRequests' && (authStore.role == "Donor" || authStore.role == "Admin")) 
-        {
-          next();
-        }
-        if (to.name == 'RespondPage' && (authStore.role == "Donor" || authStore.role == "Admin")) 
-        {
-          next();
-        }
-        if(to.name == 'RequestPage')
-        {
-          next();
-        }
-        if(to.name == 'Home')
-        {
-          next();
-        }
-        if(to.name == 'CreateMatch' && authStore.role == 'Admin') 
-        {
-          next();
-        }
-        if(to.name == 'AutoMatch' && authStore.role == 'Admin') 
-        {
-          next();
-        }
-        if(to.name == 'MatchesPage') 
-        {
-          next();
-        }
-        if(to.name == 'CreateEvent' && authStore.role == 'Admin')
-        {
-          next();
-        }
-        if(to.name == 'ViewEvents' && authStore.role == 'Admin')
-        {
-          next();
-        }
-        if(to.name == 'ManageItems' && authStore.role == 'Admin')
-        {
-          next();
-        }
-        if (to.name == 'ShippingView') {
-          next();
-        }
-        if(to.name == 'Recipient' && authStore.role == "Recipient")
-        {
-          next();
-        }
-        
-      } else {
-        next("/");
-      }
-    } catch {
-      next("/");
+    // If not authenticated, redirect to login
+    if (!authStore.isAuthenticated) {
+      next({ name: 'login' });
+      return;
     }
-  } else {
-    next();
+    
+    // Check if user has required role for the route
+    if (to.meta.roles && !to.meta.roles.includes(authStore.role)) {
+      // Redirect to appropriate dashboard if user doesn't have required role
+      if (authStore.isAdmin) {
+        next({ name: 'admin' });
+      } else if (authStore.isDonor) {
+        next({ name: 'donor' });
+      } else if (authStore.isRecipient) {
+        next({ name: 'recipient' });
+      } else {
+        next({ name: 'login' });
+      }
+      return;
+    }
+  } else if (authStore.isAuthenticated) {
+    // Redirect to appropriate dashboard if already logged in and trying to access auth pages
+    if (to.name === 'login' || to.name === 'register' || to.name === 'reset-password') {
+      if (authStore.isAdmin) {
+        next({ name: 'admin' });
+      } else if (authStore.isDonor) {
+        next({ name: 'donor' });
+      } else if (authStore.isRecipient) {
+        next({ name: 'recipient' });
+      } else {
+        next();
+      }
+      return;
+    }
   }
+  
+  // All good, proceed to the route
+  next();
 });
 
 export default router;
