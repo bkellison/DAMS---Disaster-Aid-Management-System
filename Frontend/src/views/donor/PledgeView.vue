@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, computed  } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth';
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
+import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -77,7 +78,7 @@ async function updatePledge(pledge, qty) {
         <h1 class="pledge-header">Pledges View</h1>
         
         <div v-if="!isAdmin" class="action-button-container">
-          <button @click="goToPledgeForm" class="create-btn">+ Create New Pledge</button>
+          <AppButton variant="add" @click="goToPledgeForm">+ Create New Pledge</AppButton>
         </div>
 
         <table class="pledge-table">
@@ -106,12 +107,18 @@ async function updatePledge(pledge, qty) {
                     <td v-if="isAdmin">{{ pledge.donor_id }}</td>
                     <td v-if="isAdmin">{{ pledge.zip_code }}</td>
                     <td v-if="isAdmin || isDonor" class="action-buttons">
-                        <button @click="allowEdit(pledge)" title="Update Pledged Qty" class="update-btn">
+                        <AppButton 
+                          variant="edit" 
+                          @click="allowEdit(pledge)" 
+                          title="Update Pledged Qty">
                           {{ rowToEditId == pledge.pledge_id ? 'Save' : 'Update' }}
-                        </button>
-                        <button @click="cancelPledge(pledge.pledge_id)" title="Cancel Remaining Pledged Items" class="delete-btn">
-                          Cancel
-                        </button>
+                        </AppButton>
+                        <AppButton 
+                          variant="danger" 
+                          @click="cancelPledge(pledge.pledge_id)" 
+                          title="Cancel Remaining Pledged Items">
+                          Delete
+                        </AppButton>
                     </td>
                 </tr>
             </tbody>
@@ -138,7 +145,6 @@ async function updatePledge(pledge, qty) {
     border-radius: 12px;
     margin-top: 40px; 
     border: 10px solid #c9b28e;
-
 }
   
 .pledge-header {
@@ -151,7 +157,6 @@ async function updatePledge(pledge, qty) {
     color: #5c4033; 
     margin-bottom: 25px; 
     border: 5px solid #c9b28e;
-
 }
 
 .action-button-container {
@@ -160,27 +165,11 @@ async function updatePledge(pledge, qty) {
     margin-bottom: 20px;
 }
 
-.create-btn {
-    background: #2e8b57;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.create-btn:hover {
-    background: #236b43;
-}
-
 .pledge-table {
     width: 100%;
     margin-top: 30px;
     border-collapse: collapse;
     border: 5px solid #c9b28e;
-
 }
 
 .pledge-table th,
@@ -205,38 +194,6 @@ async function updatePledge(pledge, qty) {
 .action-buttons {
     display: flex;
     gap: 8px;
-}
-
-.update-btn {
-    background-color: #0077cc;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.update-btn:hover {
-    background-color: #005fa3;
-    transform: scale(1.05);
-}
-
-.delete-btn {
-    background-color: #e63946;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.delete-btn:hover {
-    background-color: #c82333;
-    transform: scale(1.05);
 }
 
 .qty-input {

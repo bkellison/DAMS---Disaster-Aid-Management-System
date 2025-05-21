@@ -39,13 +39,17 @@
           </div>
 
           <div class="button-row">
-            <button @click="submitResponse" class="submit-btn">
+            <AppButton 
+              variant="primary" 
+              @click="submitResponse">
               {{ isEditing ? 'Update Response' : 'Submit Response' }}
-            </button>
+            </AppButton>
             
-            <button @click="goBack" class="back-btn">
+            <AppButton 
+              variant="cancel" 
+              @click="goBack">
               Cancel
-            </button>
+            </AppButton>
           </div>
         </div>
       </div>
@@ -60,6 +64,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
+import AppButton from '@/components/common/AppButton.vue';
 import axios from 'axios'
 
 const route = useRoute()
@@ -187,6 +192,7 @@ const goBack = () => {
 .description {
   color: #6c757d;
   margin-bottom: 30px;
+  text-align: left;
 }
 
 .request-info {
@@ -244,34 +250,6 @@ input, textarea {
   font-size: 16px;
   font-family: 'Poppins', sans-serif;
   background-color: #fcfcfc;
-}
-
-.submit-btn, .back-btn {
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  border: none;
-}
-
-.submit-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-}
-
-.submit-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
-}
-
-.back-btn {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.back-btn:hover {
-  background: #d0d0d0;
 }
 
 .loading {

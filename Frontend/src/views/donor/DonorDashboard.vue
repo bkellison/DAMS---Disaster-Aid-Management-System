@@ -1,6 +1,8 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import AppButton from '@/components/common/AppButton.vue';
+
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -27,24 +29,23 @@ const handleMatches = () => {
         <div class="donor-box">
           <h3>Pledges</h3>
           <p>Create and manage your donation pledges to help those in need</p>
-          <button @click="handlePledge">Manage Pledges</button>
+          <AppButton variant="primary" @click="handlePledge">Manage Pledges</AppButton>
         </div>
 
         <div class="donor-box">
           <h3>Requests</h3>
           <p>View and respond to requests for help from recipients</p>
-          <button @click="handleRespond">View Requests</button>
+          <AppButton variant="primary" @click="handleRespond">View Requests</AppButton>
         </div>
 
         <div class="donor-box">
           <h3>Matches</h3>
           <p>Track matched donations, shipping information and delivery status</p>
-          <button @click="handleMatches">View Matches</button>
+          <AppButton variant="primary" @click="handleMatches">View Matches</AppButton>
         </div>
       </div>
     </div>
   </div>
-  <!-- Removed router-view from here -->
 </template>
 
 <style scoped>
@@ -77,7 +78,6 @@ const handleMatches = () => {
   color: #5c4033;
   margin-bottom: 25px;
   border: 5px solid #c9b28e;
-
 }
 
 .donor-boxes {
@@ -115,21 +115,5 @@ const handleMatches = () => {
   color: #5c4033;
   margin-bottom: 30px;
   flex-grow: 1;
-}
-
-.donor-box button {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  margin-top: 20px;
-}
-
-.donor-box button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
 </style>

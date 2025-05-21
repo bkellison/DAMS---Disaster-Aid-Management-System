@@ -672,10 +672,10 @@ def get_request_details(request_id):
 def submit_response():
     db = get_db()
     data = request.get_json()
-    
+
     try:
         request_id = data.get("request_id")
-        donor_id = data.get("donor_id")  
+        donor_id = data.get("donor_id")
         quantity = data.get("quantity")
         message = data.get("message", "")
 
@@ -694,8 +694,24 @@ def submit_response():
             "message": message
         })
 
-        update_query = text("UPDATE dr_events.request SET status = 'approved' WHERE request_id = :request_id")
-        db.session.execute(update_query, {"request_id": request_id})
+        # Get current total matched quantity after this new response
+        match_sum_query = text("""
+            SELECT COALESCE(SUM(quantity), 0) AS total_responded
+            FROM dr_events.response
+            WHERE request_id = :request_id
+        """)
+        match_sum = db.session.execute(match_sum_query, {"request_id": request_id}).scalar()
+
+        # Get original request quantity
+        request_quantity_query = text("""
+            SELECT quantity FROM dr_events.request WHERE request_id = :request_id
+        """)
+        request_quantity = db.session.execute(request_quantity_query, {"request_id": request_id}).scalar()
+
+        # Only mark as approved if fully responded to
+        if match_sum >= request_quantity:
+            update_query = text("UPDATE dr_events.request SET status = 'approved' WHERE request_id = :request_id")
+            db.session.execute(update_query, {"request_id": request_id})
 
         db.session.commit()
         return jsonify({"message": "Response submitted successfully"}), 201
@@ -703,6 +719,7 @@ def submit_response():
     except Exception as ex:
         db.session.rollback()
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+
     
 @api_routes.route('/getItemsByCategory/<int:category_id>', methods=["GET"])
 def get_items_by_category(category_id):
@@ -726,5 +743,270 @@ def get_items_by_category(category_id):
 
         return jsonify(items), 200
 
+    except Exception as ex:
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
+# Add this to mysql_routes.py file
+
+@api_routes.route('/getItemAvailability', methods=["GET"])
+def get_item_availability():
+    db = get_db()
+    try:
+        # Query that combines item definitions with available quantities from pledges
+        query = text("""
+            SELECT 
+                i.item_id,
+                i.name, 
+                i.description,
+                i.category_id,
+                c.category_name,
+                i.quantity AS base_quantity,  -- Base quantity added by admin
+                COALESCE(pledge_totals.total_pledged, 0) AS total_pledged,
+                COALESCE(pledge_totals.available, 0) AS available_pledged,
+                COALESCE(pledge_totals.total_pledged, 0) + i.quantity AS total_combined,
+                COALESCE(pledge_totals.available, 0) + i.quantity AS available_combined
+            FROM dr_events.item i
+            JOIN dr_events.category c ON i.category_id = c.category_id
+            LEFT JOIN (
+                SELECT 
+                    p.item_id,
+                    SUM(p.item_quantity) AS total_pledged,
+                    SUM(p.item_quantity - (p.allocated_quantity + p.fulfilled_quantity)) AS available
+                FROM dr_events.pledge p
+                WHERE p.canceled_flag = 0
+                GROUP BY p.item_id
+            ) pledge_totals ON i.item_id = pledge_totals.item_id
+            ORDER BY c.category_name, i.name
+        """)
+        
+        result = db.session.execute(query)
+        
+        items = [
+            {
+                "id": row.item_id,
+                "name": row.name,
+                "description": row.description,
+                "category_id": row.category_id,
+                "category_name": row.category_name,
+                "base_quantity": row.base_quantity,  # Added by admin in the item table
+                "total_pledged": row.total_pledged,  # Total from donor pledges
+                "available_pledged": row.available_pledged,  # Available from pledges
+                "total_combined": row.total_combined,  # Total combined (base + pledged)
+                "available_combined": row.available_combined  # Available combined
+            }
+            for row in result
+        ]
+        
+        return jsonify(items), 200
+    except SQLAlchemyError as ex:
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
+@api_routes.route('/getCombinedMatchOptions', methods=['GET'])
+def get_combined_match_options():
+    db = get_db()
+    
+    request_id = request.args.get('request_id')
+    
+    if not request_id:
+        return jsonify({"error": "Missing request_id parameter"}), 400
+    
+    try:
+        # First get the request details
+        request_query = text("""
+            SELECT r.request_id, r.user_id AS recipient_id, r.item_id,
+                   r.quantity, r.status, item.name AS item_name,
+                   u.zip_code AS recipient_zipcode,
+                   COALESCE(matches.total_matched, 0) AS total_matched,
+                   r.quantity - COALESCE(matches.total_matched, 0) AS quantity_needed
+            FROM dr_events.request r
+            JOIN dr_admin.user u ON r.user_id = u.user_id
+            JOIN dr_events.item ON r.item_id = item.item_id
+            LEFT JOIN (
+                SELECT request_id, SUM(match_quantity) AS total_matched
+                FROM dr_events.match
+                WHERE canceled_flag = 0
+                GROUP BY request_id
+            ) matches ON r.request_id = matches.request_id
+            WHERE r.request_id = :request_id
+        """)
+        
+        request_result = db.session.execute(request_query, {"request_id": request_id}).fetchone()
+        
+        if not request_result:
+            return jsonify({"error": "Request not found"}), 404
+        
+        # Then get all matching pledges
+        pledges_query = text("""
+            SELECT p.pledge_id, p.user_id AS donor_id, u.username AS donor_name,
+                   u.zip_code AS donor_zipcode, p.item_id, i.name AS item_name,
+                   i.category_id, c.category_name, p.item_quantity AS total_pledged,
+                   p.fulfilled_quantity, p.allocated_quantity,
+                   (p.item_quantity - (p.allocated_quantity + p.fulfilled_quantity)) AS available_quantity,
+                   p.days_to_ship
+            FROM dr_events.pledge p
+            JOIN dr_admin.user u ON p.user_id = u.user_id
+            JOIN dr_events.item i ON p.item_id = i.item_id
+            JOIN dr_events.category c ON i.category_id = c.category_id
+            WHERE p.item_id = :item_id
+              AND p.canceled_flag = 0
+              AND (p.item_quantity - (p.allocated_quantity + p.fulfilled_quantity)) > 0
+            ORDER BY p.days_to_ship ASC, available_quantity DESC
+        """)
+        
+        pledges_result = db.session.execute(pledges_query, {"item_id": request_result.item_id})
+        
+        pledges = [
+            {
+                "pledge_id": row.pledge_id,
+                "donor_id": row.donor_id,
+                "donor_name": row.donor_name,
+                "donor_zipcode": row.donor_zipcode,
+                "item_id": row.item_id,
+                "item_name": row.item_name,
+                "category_id": row.category_id,
+                "category_name": row.category_name,
+                "total_pledged": row.total_pledged,
+                "available_quantity": row.available_quantity,
+                "days_to_ship": row.days_to_ship
+            }
+            for row in pledges_result
+        ]
+        
+        # Get the base quantity from the item table
+        item_query = text("""
+            SELECT i.item_id, i.name, i.quantity AS base_quantity
+            FROM dr_events.item i
+            WHERE i.item_id = :item_id
+        """)
+        
+        item_result = db.session.execute(item_query, {"item_id": request_result.item_id}).fetchone()
+        base_quantity = item_result.base_quantity if item_result else 0
+        
+        # Calculate total available
+        total_from_pledges = sum(pledge["available_quantity"] for pledge in pledges)
+        total_available = total_from_pledges + base_quantity
+        
+        # Prepare the available sources list (admin + pledges)
+        available_sources = []
+        
+        # Add admin source if there's inventory
+        if base_quantity > 0:
+            available_sources.append({
+                "source_type": "admin",
+                "item_id": request_result.item_id,
+                "item_name": request_result.item_name,
+                "available_quantity": base_quantity
+            })
+        
+        # Add each pledge as a source
+        for pledge in pledges:
+            available_sources.append({
+                "source_type": "pledge",
+                "pledge_id": pledge["pledge_id"],
+                "donor_id": pledge["donor_id"],
+                "donor_name": pledge["donor_name"],
+                "days_to_ship": pledge["days_to_ship"],
+                "item_id": pledge["item_id"],
+                "item_name": pledge["item_name"],
+                "available_quantity": pledge["available_quantity"]
+            })
+        
+        response = {
+            "request": {
+                "request_id": request_result.request_id,
+                "recipient_id": request_result.recipient_id,
+                "item_id": request_result.item_id,
+                "item_name": request_result.item_name,
+                "quantity": request_result.quantity,
+                "status": request_result.status,
+                "recipient_zipcode": request_result.recipient_zipcode,
+                "total_matched": request_result.total_matched,
+                "quantity_needed": request_result.quantity_needed
+            },
+            "available_pledges": pledges,
+            "available_sources": available_sources,
+            "base_quantity": base_quantity,
+            "total_from_pledges": total_from_pledges,
+            "total_available": total_available
+        }
+        
+        return jsonify(response), 200
+    except SQLAlchemyError as ex:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+
+# Endpoint to create a match from admin inventory
+@api_routes.route('/createAdminMatch', methods=['POST'])
+def create_admin_match():
+    db = get_db()
+    data = request.get_json()
+    
+    try:
+        request_id = data.get('requestId')
+        admin_quantity = data.get('adminQuantity')
+        
+        if not request_id or not admin_quantity:
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        # 1. Get request and item details
+        request_query = text("""
+            SELECT r.request_id, r.user_id, r.item_id, i.quantity AS base_quantity
+            FROM dr_events.request r
+            JOIN dr_events.item i ON r.item_id = i.item_id
+            WHERE r.request_id = :request_id
+        """)
+        
+        request_result = db.session.execute(request_query, {"request_id": request_id}).fetchone()
+        
+        if not request_result:
+            return jsonify({"error": "Request not found"}), 404
+        
+        # 2. Check if enough admin inventory is available
+        if request_result.base_quantity < admin_quantity:
+            return jsonify({"error": "Not enough admin inventory available"}), 400
+        
+        # 3. Create the match record with a special flag for admin source
+        match_query = text("""
+            INSERT INTO dr_events.match
+            (request_id, match_status, match_quantity, shipping_status, is_admin_source)
+            VALUES (:request_id, 'matched', :admin_quantity, 'pending', 1)
+        """)
+        
+        db.session.execute(match_query, {
+            "request_id": request_id,
+            "admin_quantity": admin_quantity
+        })
+        
+        # 4. Update the item's base quantity
+        update_item_query = text("""
+            UPDATE dr_events.item
+            SET quantity = quantity - :admin_quantity
+            WHERE item_id = :item_id
+        """)
+        
+        db.session.execute(update_item_query, {
+            "item_id": request_result.item_id,
+            "admin_quantity": admin_quantity
+        })
+        
+        # 5. Update the request's status
+        update_request_query = text("""
+            UPDATE dr_events.request
+            SET status = 'matched'
+            WHERE request_id = :request_id
+        """)
+        
+        db.session.execute(update_request_query, {"request_id": request_id})
+        
+        db.session.commit()
+        
+        return jsonify({"message": "Match created successfully from admin inventory"}), 200
+    except SQLAlchemyError as ex:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500

@@ -1,7 +1,7 @@
 <template>
   <div class="auto-match-container">
     <div class="content-box">
-      <h1 class="auto-match-header">Initiate Auto Match</h1>
+      <h1 class="auto-match-header">Auto Match</h1>
       
       <div v-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
         Request has enough pledges and matches to fulfill.
@@ -18,11 +18,83 @@
           <p v-if="selectedRequest.requester_zipcode"><strong>Recipient Location:</strong> {{ selectedRequest.requester_zipcode }}</p>
           <p v-if="selectedRequest.request_details"><strong>Details:</strong> {{ selectedRequest.request_details }}</p>
         </div>
+
+        <!-- Show inventory breakdown -->
+        <div class="inventory-breakdown">
+          <h4>Available Inventory</h4>
+          <div class="inventory-stats">
+            <div class="inventory-stat">
+              <span class="stat-label">Total Available:</span>
+              <span class="stat-value">{{ combinedOptions.total_available }} items</span>
+            </div>
+            <div class="inventory-stat">
+              <span class="stat-label">Admin Inventory:</span>
+              <span class="stat-value">{{ combinedOptions.base_quantity }} items</span>
+            </div>
+            <div class="inventory-stat">
+              <span class="stat-label">From Pledges:</span>
+              <span class="stat-value">{{ combinedOptions.total_from_pledges }} items</span>
+            </div>
+          </div>
+        </div>
         
-        <div class="form-section">
+        <div v-if="combinedOptions.total_available === 0" class="no-pledges-message">
+          No inventory or pledges available for this item type. Please check back later or add more pledges.
+        </div>
+        
+        <div v-else-if="combinedOptions.total_available < selectedRequest.request_quantity_remaining" class="partial-match-message">
+          <p><strong>Note:</strong> Only {{ combinedOptions.total_available }} items are available of the {{ selectedRequest.request_quantity_remaining }} still needed. 
+          This will be a partial match.</p>
+        </div>
+        
+        <div class="form-section" v-if="combinedOptions.total_available > 0">
           <h3>Select Auto-Match Method</h3>
-          <p class="helper-text">Choose a matching algorithm to automatically pair this request with available pledges.</p>
+          <p class="helper-text">Choose how you want the system to match this request with available inventory sources.</p>
           
+          <!-- Inventory priority selection -->
+          <div class="priority-selection">
+            <h4>Inventory Priority</h4>
+            <p class="help-text">Select which inventory source should be prioritized when matching.</p>
+            
+            <div class="radio-group">
+              <div class="radio-option">
+                <input 
+                  type="radio" 
+                  id="priority-admin" 
+                  value="admin" 
+                  v-model="inventoryPriority"
+                  :disabled="combinedOptions.base_quantity === 0"
+                />
+                <label for="priority-admin">Admin Inventory First</label>
+                <span class="option-description">Use admin inventory before donor pledges</span>
+              </div>
+              
+              <div class="radio-option">
+                <input 
+                  type="radio" 
+                  id="priority-pledges" 
+                  value="pledges" 
+                  v-model="inventoryPriority"
+                  :disabled="combinedOptions.total_from_pledges === 0"
+                />
+                <label for="priority-pledges">Donor Pledges First</label>
+                <span class="option-description">Use donor pledges before admin inventory</span>
+              </div>
+              
+              <div class="radio-option">
+                <input 
+                  type="radio" 
+                  id="priority-auto" 
+                  value="auto" 
+                  v-model="inventoryPriority"
+                />
+                <label for="priority-auto">Automatic (Recommended)</label>
+                <span class="option-description">Let the system decide the optimal source based on match method</span>
+              </div>
+            </div>
+          </div>
+          
+          <h4>Match Algorithms</h4>
           <div class="match-options">
             <div v-for="matchType in matchTypes" :key="matchType.match_type_id" class="match-option">
               <button class="match-btn" @click="createAutoMatch(selectedRequest, matchType)">
@@ -33,7 +105,7 @@
           </div>
           
           <div class="button-group">
-            <button class="cancel-btn" @click="goBack">Cancel</button>
+            <AppButton variant="cancel" @click="goBack">Cancel</AppButton>
           </div>
         </div>
       </div>
@@ -42,10 +114,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import AppButton from '@/components/common/AppButton.vue'; 
 
 const route = useRoute();
 const router = useRouter();
@@ -53,6 +126,13 @@ const authStore = useAuthStore();
 
 const matchTypes = ref([]);
 const selectedRequest = ref({});
+const combinedOptions = ref({
+  base_quantity: 0,
+  total_from_pledges: 0,
+  total_available: 0,
+  available_pledges: []
+});
+const inventoryPriority = ref('auto'); // Default to auto
 
 // Helper function to capitalize first letter
 function capitalizeFirstLetter(string) {
@@ -72,14 +152,42 @@ async function getMatchType() {
 }
 
 // Get request details
-async function getRequestId(requestId) {
+async function getRequestDetails(requestId) {
   try {
     const response = await axios.get(`http://127.0.0.1:5000/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
     if (response.data.length > 0) {
       selectedRequest.value = response.data[0];
+      
+      // Now fetch the combined inventory options
+      await getCombinedOptions(requestId);
     }
   } catch (error) {
-    console.error('Error getting request id:', error);
+    console.error('Error getting request details:', error);
+  }
+}
+
+// Get combined inventory options (admin + pledges)
+async function getCombinedOptions(requestId) {
+  try {
+    const response = await axios.get(`http://127.0.0.1:5000/getCombinedMatchOptions?request_id=${requestId}`);
+    combinedOptions.value = response.data;
+    
+    // Set the default inventory priority based on what's available
+    if (combinedOptions.value.base_quantity === 0) {
+      inventoryPriority.value = 'pledges';
+    } else if (combinedOptions.value.total_from_pledges === 0) {
+      inventoryPriority.value = 'admin';
+    }
+  } catch (error) {
+    console.error('Error getting combined inventory options:', error);
+    
+    // Fallback with empty data if API call fails
+    combinedOptions.value = {
+      base_quantity: 0,
+      total_from_pledges: 0,
+      total_available: 0,
+      available_pledges: []
+    };
   }
 }
 
@@ -88,13 +196,14 @@ async function createAutoMatch(selectedRequest, matchType) {
   try {
     const matchRequest = {
       request_id: selectedRequest.request_id,
-      match_type_name: matchType.name
+      match_type_name: matchType.name,
+      inventory_priority: inventoryPriority.value
     };
     
     const response = await axios.post('http://127.0.0.1:5000/api/autoMatch', matchRequest);
     
     if (response.status === 200) {
-      alert(response.data.message);
+      alert(response.data.message || 'Match created successfully!');
       router.push({ path: `/match-view` });
     }
   } catch (error) {
@@ -102,7 +211,7 @@ async function createAutoMatch(selectedRequest, matchType) {
     
     if (error.response) {
       if (error.response.status === 400) {
-        alert('No pledges available to match with this request.');
+        alert('No inventory or pledges available to match with this request.');
       } else {
         alert(`Error: ${error.response.data.message || 'Failed to create match'}`);
       }
@@ -122,7 +231,7 @@ const goBack = () => {
 // Initialize page data
 onMounted(() => {
   const requestId = route.params.id;
-  getRequestId(requestId);
+  getRequestDetails(requestId);
   getMatchType();
 });
 </script>
@@ -149,10 +258,10 @@ onMounted(() => {
 
 .auto-match-header {
   background: #f5e1c5;
-  padding: 15px 65px;
+  padding: 15px 30px;
   border-radius: 20px;
   display: inline-block;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 30px;
@@ -173,7 +282,51 @@ onMounted(() => {
   font-size: 22px;
 }
 
-.no-matches-message {
+.inventory-breakdown {
+  background-color: #e6f7ef;
+  border: 1px solid #8fcea5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.inventory-breakdown h4 {
+  color: #2e8b57;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.inventory-stats {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.inventory-stat {
+  flex: 1;
+  min-width: 150px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #5c4033;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2e8b57;
+}
+
+.no-matches-message, .no-pledges-message {
   background-color: #ffecb3;
   color: #856404;
   padding: 15px;
@@ -184,10 +337,78 @@ onMounted(() => {
   text-align: center;
 }
 
+.partial-match-message {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
 .helper-text {
   color: #666;
   margin-bottom: 20px;
   font-size: 16px;
+}
+
+.help-text {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.priority-selection {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.priority-selection h4 {
+  color: #5c4033;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.radio-group {
+  margin-top: 15px;
+}
+
+.radio-option {
+  margin-bottom: 15px;
+  padding: 12px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0d4c3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 10px;
+}
+
+.radio-option label {
+  font-weight: 600;
+  color: #5c4033;
+  margin-left: 24px;
+  margin-top: -20px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.option-description {
+  font-size: 14px;
+  color: #666;
+  margin-left: 24px;
+}
+
+.radio-option input[type="radio"]:disabled + label,
+.radio-option input[type="radio"]:disabled ~ .option-description {
+  color: #aaa;
 }
 
 .match-options {
@@ -237,22 +458,6 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-.cancel-btn {
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  border: none;
-  background: #e0e0e0;
-  color: #333;
-  min-width: 120px;
-}
-
-.cancel-btn:hover {
-  background: #d0d0d0;
-}
-
 @media (max-width: 768px) {
   .content-box {
     padding: 20px;
@@ -265,6 +470,14 @@ onMounted(() => {
   
   .match-btn {
     padding: 15px;
+  }
+  
+  .inventory-stats {
+    flex-direction: column;
+  }
+  
+  .inventory-stat {
+    min-width: auto;
   }
 }
 </style>

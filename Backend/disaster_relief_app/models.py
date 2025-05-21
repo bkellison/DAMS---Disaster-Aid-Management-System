@@ -34,6 +34,7 @@ class Category(db.Model):
 # ----------------------------------------
 # Item Table
 # ----------------------------------------
+# Update to the Item model in models.py
 class Item(db.Model):
     __bind_key__ = 'dr_events'
     __tablename__ = 'item'
@@ -41,13 +42,12 @@ class Item(db.Model):
     item_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    quantity = db.Column(db.Integer, default=1)
+    quantity = db.Column(db.Integer, default=1)  # Ensure this matches the database
     category_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
     created_by = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
 
     category = db.relationship('Category', back_populates='items')
-    #creator = db.relationship('User', back_populates='created_items')
 
 # ----------------------------------------
 # Event Table

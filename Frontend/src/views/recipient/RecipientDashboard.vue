@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -30,19 +31,19 @@ const handleViewMatches = () => {
         <div class="recipient-box">
           <h3>Create Request</h3>
           <p>Create a new request for disaster relief supplies you need</p>
-          <button @click="handleCreateRequest">Create Request</button>
+          <AppButton variant="primary" @click="handleCreateRequest">Create Request</AppButton>
         </div>
 
         <div class="recipient-box">
           <h3>View Requests</h3>
           <p>Track your existing requests and their fulfillment status</p>
-          <button @click="handleViewRequests">View Requests</button>
+          <AppButton variant="primary" @click="handleViewRequests">View Requests</AppButton>
         </div>
 
         <div class="recipient-box">
           <h3>View Matches</h3>
           <p>See donor matches, shipping information and track deliveries</p>
-          <button @click="handleViewMatches">View Matches</button>
+          <AppButton variant="primary" @click="handleViewMatches">View Matches</AppButton>
         </div>
       </div>
     </div>
@@ -124,22 +125,5 @@ const handleViewMatches = () => {
   color: #5c4033;
   margin-bottom: 30px;
   flex-grow: 1;
-}
-
-/* Button styling */
-.recipient-box button {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  margin-top: 20px;
-}
-
-.recipient-box button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C)
 }
 </style>

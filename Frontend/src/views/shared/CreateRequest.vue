@@ -3,6 +3,7 @@
     <div class="content-box">
       <h1 class="create-request-header">Create Request</h1>
       <p class="description">Select an event and specify your needs below.</p>
+      
       <form @submit.prevent="submitRequest">
         <div class="form-group">
           <label>Select Disaster Event:</label>
@@ -44,7 +45,9 @@
           <textarea v-model="details" rows="4" placeholder="Describe your specific needs..."></textarea>
         </div>
 
-        <button type="submit" class="submit-btn">Submit Request</button>
+        <div class="auth-actions">
+          <AppButton type="submit" variant="primary">Submit Request</AppButton>
+        </div>
       </form>
     </div>
   </div>
@@ -55,8 +58,12 @@ import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
+import AppButton from '@/components/common/AppButton.vue';
 
 export default {
+  components: {
+    AppButton
+  },
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
@@ -194,7 +201,7 @@ export default {
 .create-request-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  color: #5c4033; 
+  color: #8B5E3C; 
   max-width: 600px;
   margin: auto;
   padding: 50px 20px;
@@ -203,7 +210,7 @@ export default {
 .content-box {
   background-color: #f9f3e8;
   border-radius: 15px;
-  padding: 40px;
+  padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
 }
@@ -217,12 +224,14 @@ export default {
   font-size: 32px; 
   font-weight: 600;
   color: #5c4033; 
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  text-align: left;
 }
 
 .description {
   color: #6c757d;
   margin-bottom: 30px;
+  text-align: left;
 }
 
 /* Form styling */
@@ -254,23 +263,11 @@ input, select, textarea {
   font-size: 16px;
   font-family: 'Poppins', sans-serif;
   background-color: white;
+  width: 100%;
 }
 
-/* Button styling */
-.submit-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  margin-top: 10px;
-  cursor: pointer;
-}
-
-.submit-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
+.auth-actions {
+  margin-top: 30px;
+  margin-bottom: 20px;
 }
 </style>

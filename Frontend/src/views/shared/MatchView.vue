@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import AppButton from '@/components/common/AppButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -75,9 +76,11 @@ const getStatusClass = (status) => {
                         </span>
                       </td>
                       <td>
-                        <button @click="viewShippingDetails(match)" class="action-btn">
+                        <AppButton 
+                          variant="primary" 
+                          @click="viewShippingDetails(match)">
                           {{ match.shipping_status === 'pending' ? 'Update Shipping' : 'View Shipping' }}
-                        </button>
+                        </AppButton>
                       </td>
                   </tr>
               </tbody>
@@ -148,29 +151,13 @@ const getStatusClass = (status) => {
 .match-table th {
     background-color: #f5e1c5;
     color: #5c4033;
-    text-align: left;
+    text-align: center;
 }
 
 .match-table td {
     background-color: #fdf6ee;
     color: #5c4033;
-    text-align: left;
-}
-
-.action-btn {
-    background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out, background-color 0.3s;
-}
-
-.action-btn:hover {
-    transform: scale(1.05);
-    background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
+    text-align: center;
 }
 
 .status-pending {

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();
 
@@ -75,7 +76,7 @@ async function createPledge() {
     <div class="pledge-form-container">
       <div class="content-box">
         <h1 class="pledge-form-header">Create Pledge</h1>
-        <p>Make a pledge by filling in the details below.</p>
+        <p class="description">Make a pledge by filling in the details below.</p>
         
         <form @submit.prevent="createPledge">
           <div class="form-group">
@@ -108,7 +109,9 @@ async function createPledge() {
             <input type="number" v-model="daysToShip" required :disabled="selectedItem == null" min="1"/>
           </div>
 
-          <button type="submit" class="submit-btn">Make Pledge</button>
+          <div class="auth-actions">
+            <AppButton type="submit" variant="primary">Make Pledge</AppButton>
+          </div>
         </form>
       </div>
     </div>
@@ -132,6 +135,7 @@ async function createPledge() {
   padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
+  width: 500px;
 }
 
 .pledge-form-header {
@@ -143,6 +147,12 @@ async function createPledge() {
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 20px; 
+}
+
+.description {
+  color: #6c757d;
+  margin-bottom: 30px;
+  text-align: left;
 }
 
 form {
@@ -179,20 +189,8 @@ input:disabled, select:disabled {
   cursor: not-allowed;
 }
 
-.submit-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.submit-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
+.auth-actions {
+  margin-top: 20px;
+  text-align: left;
 }
 </style>

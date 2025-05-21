@@ -15,9 +15,9 @@
           <p><strong>Remaining Needed:</strong> {{ request.request_quantity_remaining }}</p>
 
           <div class="button-group">
-            <button v-if="authStore.role == 'Donor'" class="action-btn" @click="respondToRequest(request.request_id)">Respond</button>
-            <button v-if="authStore.role == 'Admin'" class="action-btn" @click="goToMatchForm(request.request_id)">Manual Match</button>
-            <button v-if="authStore.role == 'Admin'" class="action-btn" @click="goToAutoMatch(request.request_id)">Auto Match</button>
+            <AppButton v-if="authStore.role == 'Donor'" variant="primary" @click="respondToRequest(request.request_id)">Respond</AppButton>
+            <AppButton v-if="authStore.role == 'Admin'" variant="primary" @click="goToMatchForm(request.request_id)">Manual Match</AppButton>
+            <AppButton v-if="authStore.role == 'Admin'" variant="primary" @click="goToAutoMatch(request.request_id)">Auto Match</AppButton>
           </div>
         </li>
       </ul>
@@ -28,25 +28,37 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-import { useRouter } from 'vue-router';
+import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import AppButton from '@/components/common/AppButton.vue';
+
 const router = useRouter();
 const authStore = useAuthStore();
 authStore.loadUserDataFromCookie();
 const requests = ref([]);
 
-onMounted(async () => {
+const loadRequests = async () => {
   try {
     const response = await axios.get('http://127.0.0.1:5000/getRequestsForResponse');
     requests.value = response.data.filter(i => i.request_quantity_remaining > 0) || [];
   } catch (error) {
     console.error('Error fetching requests:', error);
   }
+};
+
+onMounted(loadRequests);
+
+// Refresh list if navigating back from a response
+onBeforeRouteUpdate((to, from, next) => {
+  loadRequests();
+  next();
 });
 
-// Navigate to the "Pledge" or "Response" page
 const respondToRequest = (requestId) => {
-  router.push({ path: `/respond/${requestId}` });
+  router.push({ path: `/respond/${requestId}` }).then(() => {
+    // Optional: set a localStorage flag to reload when coming back
+    localStorage.setItem('reloadRequests', 'true');
+  });
 };
 
 const goToMatchForm = (requestId) => {
@@ -56,6 +68,11 @@ const goToMatchForm = (requestId) => {
 const goToAutoMatch = (requestId) => {
   router.push({ path: `/auto-match/${requestId}`});
 };
+
+if (localStorage.getItem('reloadRequests')) {
+  loadRequests();
+  localStorage.removeItem('reloadRequests');
+}
 </script>
 
 <style scoped>
@@ -70,7 +87,7 @@ const goToAutoMatch = (requestId) => {
 }
 
 .description {
-  color: #6c757d; 
+  color: #6c757d; /* Gray color matching login page */
   font-size: 16px;
   margin-bottom: 20px;
 }
@@ -133,27 +150,14 @@ const goToAutoMatch = (requestId) => {
 
 .button-group {
   margin-top: 20px;
-}
-
-.action-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  margin-right: 10px;
-}
-
-.action-btn:hover {
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
-  transform: scale(1.05);
+  display: flex;
+  gap: 15px; /* Increased gap between buttons */
 }
 
 .request-card p {
   margin: 10px 0;
   line-height: 1.5;
 }
+
+
 </style>

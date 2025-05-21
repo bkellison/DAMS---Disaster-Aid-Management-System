@@ -29,8 +29,9 @@
               Requests <span class="dropdown-arrow">{{ showRequests ? '▲' : '▼' }}</span>
             </a>
             <div v-if="showRequests" class="app-nav__dropdown-menu">
-              <RouterLink to="/create-request" active-class="active-link">Create Request</RouterLink>
               <RouterLink to="/respond-to-requests" active-class="active-link">Manage Requests</RouterLink>
+              <RouterLink to="/create-request" active-class="active-link">Create Request</RouterLink>
+
             </div>
           </div>
           

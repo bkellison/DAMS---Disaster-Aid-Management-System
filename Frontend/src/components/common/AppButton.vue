@@ -18,7 +18,8 @@ defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'danger', 'success'].includes(value)
+    validator: (value) => ['primary', 'secondary', 'danger', 'success', 'info', 'edit', 'add', 'save', 'cancel', 'auto-match'].includes(value)
+
   },
   loading: {
     type: Boolean,
@@ -91,6 +92,44 @@ defineEmits(['click']);
 
 .app-button--success:hover:not(:disabled) {
   background-color: #227548;
+}
+
+.app-button--edit, .app-button--info, .app-button--save {
+  background-color: #0077cc;
+  color: white;
+}
+
+.app-button--edit:hover:not(:disabled), 
+.app-button--info:hover:not(:disabled),
+.app-button--save:hover:not(:disabled) {
+  background-color: #005fa3;
+}
+
+.app-button--add {
+  background-color: #2e8b57;
+  color: white;
+}
+
+.app-button--add:hover:not(:disabled) {
+  background-color: #227548;
+}
+
+.app-button--cancel {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.app-button--cancel:hover:not(:disabled) {
+  background-color: #d0d0d0;
+}
+
+.app-button--auto-match {
+  background-color: #2e8b57; 
+  color: white;
+}
+
+.app-button--auto-match:hover:not(:disabled) {
+  background-color: #227548; 
 }
 
 .spinner {

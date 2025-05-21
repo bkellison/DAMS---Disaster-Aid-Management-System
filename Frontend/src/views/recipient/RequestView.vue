@@ -3,6 +3,7 @@ import { ref, onMounted, computed  } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -20,7 +21,7 @@ async function getRequests() {
     }
 }
 
-//Hardcoded / Mock Data temporarily
+
 onMounted(() => {
     getRequests();
 })
@@ -28,6 +29,18 @@ onMounted(() => {
 const createNewRequest = () => {
   router.push({ path: `/create-request` });
 }
+const getStatusClass = (status) => {
+  const lowerStatus = (status || 'pending').toLowerCase();
+  switch (lowerStatus) {
+    case 'shipped':
+      return 'status-shipped';
+    case 'delivered':
+      return 'status-delivered';
+    default:
+      return 'status-pending';
+  }
+}
+
 </script>
 
 <template>
@@ -36,7 +49,7 @@ const createNewRequest = () => {
         <h1 class="requests-header">Your Requests</h1>
         
         <div class="action-section">
-          <button class="create-btn" @click="createNewRequest">Create New Request</button>
+          <AppButton variant="add" @click="createNewRequest">Create New Request</AppButton>
         </div>
 
         <div v-if="requests.length === 0" class="no-requests-message">
@@ -62,7 +75,16 @@ const createNewRequest = () => {
                         <td>{{ request.category_name }}</td>
                         <td>{{ request.item_name }}</td>
                         <td>{{ request.request_quantity_remaining }}</td>
-                        <td>{{ request.request_status }}</td>
+                        <td>
+                            <span 
+                                :class="[
+                                'status-label',
+                                getStatusClass(request.request_status)
+                                ]"
+                            >
+                                {{ request.request_status?.toLowerCase() || 'pending' }}
+                            </span>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -112,23 +134,6 @@ const createNewRequest = () => {
 .action-section {
     margin-bottom: 30px;
     text-align: left;
-    
-}
-
-/* Create button styling */
-.create-btn {
-  background: #2e8b57;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.create-btn:hover {
-  background: #236b43;
 }
 
 /* No requests message styling */
@@ -163,12 +168,39 @@ const createNewRequest = () => {
 .requests-table th {
     background-color: #f5e1c5;
     color: #5c4033;
-    text-align: left;
+    text-align: center;
 }
 
 .requests-table td {
     background-color: #f9f3e8;
     color: #5c4033;
-    text-align: left;
+    text-align: center;
+}
+
+.status-label {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  text-transform: capitalize;
+  min-width: 80px;
+  text-align: center;
+}
+
+.status-pending {
+    color: #b8860b;
+    font-weight: bold;
+}
+
+.status-shipped {
+    color: #0066cc;
+    font-weight: bold;
+}
+
+.status-delivered {
+    color: #2e8b57;
+    font-weight: bold;
 }
 </style>

@@ -41,7 +41,7 @@
               </select>
             </div>
             
-            <button type="submit">Update Shipping</button>
+            <AppButton type="submit" variant="primary">Update Shipping</AppButton>
           </form>
         </div>
         
@@ -52,11 +52,12 @@
           <p><strong>Shipping Date:</strong> {{ shippingInfo.shipping_date }}</p>
           
           <!-- Admin button to update delivered items -->
-          <button v-if="isAdmin && shippingInfo.shipping_status === 'delivered'" 
-                  @click="enableEditing" 
-                  class="edit-btn">
+          <AppButton 
+            v-if="isAdmin && shippingInfo.shipping_status === 'delivered'" 
+            variant="edit"
+            @click="enableEditing">
             Edit Shipping Info
-          </button>
+          </AppButton>
         </div>
       </div>
       
@@ -75,6 +76,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppButton from '@/components/common/AppButton.vue'
 import axios from 'axios'
 
 const route = useRoute()
@@ -246,39 +248,6 @@ onMounted(() => {
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 16px;
-}
-
-button {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-}
-
-button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
-}
-
-.edit-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  margin-top: 15px;
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-}
-
-.edit-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg,  #6A3E2B, #8B5E3C);
 }
 
 .error {

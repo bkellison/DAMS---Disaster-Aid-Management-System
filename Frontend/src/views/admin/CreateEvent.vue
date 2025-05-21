@@ -3,6 +3,7 @@
     <div class="content-box">
       <h2 class="event-header">Create Disaster Event</h2>
       <p class="description">Please fill in the details below to register a new disaster event.</p>
+      
       <form @submit.prevent="submitEvent">
         <input v-model="event.name" placeholder="Event Name" required />
         
@@ -15,21 +16,30 @@
         </select>
 
         <input v-model="event.location" placeholder="Location (City/State or Lat/Long)" required />
-        <label class="field-label">Start Date:</label>
-        <input type="date" v-model="event.startDate" required />
+        
+        <div class="form-group">
+          <label class="field-label">Start Date:</label>
+          <input type="date" v-model="event.startDate" required />
+        </div>
 
-        <label class="field-label">End Date:</label>
-        <input type="date" v-model="event.endDate" required />
+        <div class="form-group">
+          <label class="field-label">End Date:</label>
+          <input type="date" v-model="event.endDate" required />
+        </div>
 
-        <label class="field-label">Select Categories:</label>
-        <select v-model="event.categoryIds" multiple>
-          <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-            {{ cat.category_name }}
-          </option>
-        </select>
-        <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
+        <div class="form-group">
+          <label class="field-label">Select Categories:</label>
+          <select v-model="event.categoryIds" multiple>
+            <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+              {{ cat.category_name }}
+            </option>
+          </select>
+          <p class="help-text">Hold Ctrl/Cmd to select multiple categories</p>
+        </div>
 
-        <button type="submit" class="submit-btn">Create Event</button>
+        <div class="auth-actions">
+          <AppButton type="submit" variant="primary">Create Event</AppButton>
+        </div>
       </form>
     </div>
   </div>
@@ -38,7 +48,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
+import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();
 
@@ -109,19 +120,26 @@ onMounted(fetchCategories)
   font-size: 28px;
   font-weight: 600;
   color: #5c4033;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .description {
   color: #6c757d;
   margin-bottom: 30px;
+  text-align: left; 
 }
 
 form {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  text-align: left;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
 }
 
 input,
@@ -136,33 +154,23 @@ select {
 
 .field-label {
   text-align: left;
-  margin-bottom: -10px;
+  margin-bottom: 8px;
   font-weight: 500;
   color: #5c4033;
 }
 
 .help-text {
   font-size: 14px;
-  margin-top: -5px;
-  color: #6c757d;
+  margin-top: 5px;
+  color: #6A3E2B;
   text-align: left;
   font-style: italic;
 }
 
-.submit-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  margin-top: 10px;
-  cursor: pointer;
-}
-
-.submit-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
+.auth-actions {
+  margin-top: 30px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-start;
 }
 </style>

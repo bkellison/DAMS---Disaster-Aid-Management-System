@@ -18,8 +18,8 @@
           <p><strong>Status:</strong> {{ event.is_active ? 'Active' : 'Inactive' }}</p>
 
           <div class="button-group">
-            <button @click="editEvent(event)" class="edit-btn">Edit</button>
-            <button @click="deleteEvent(event.event_id)" class="delete-btn">Delete</button>
+            <AppButton variant="edit" @click="editEvent(event)">Edit</AppButton>
+            <AppButton variant="danger" @click="deleteEvent(event.event_id)">Delete</AppButton>
           </div>
         </li>
       </ul>
@@ -63,8 +63,8 @@
         </div>
 
         <div class="modal-buttons">
-          <button type="submit" class="save-btn">Save Changes</button>
-          <button type="button" class="cancel-btn" @click="closeModal">Cancel</button>
+          <AppButton type="submit" variant="save">Save</AppButton>
+          <AppButton type="button" variant="cancel" @click="closeModal">Cancel</AppButton>
         </div>
       </form>
     </div>
@@ -72,8 +72,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
+import AppButton from '@/components/common/AppButton.vue';
 
 const events = ref([])
 const categories = ref([])
@@ -172,7 +173,7 @@ onMounted(() => {
 }
 
 .description {
-  color: #6c757d; 
+  color: #6c757d; /* Gray color matching login page */
   font-size: 16px;
   margin-bottom: 20px;
 }
@@ -240,37 +241,7 @@ onMounted(() => {
 .button-group {
   margin-top: 20px;
   display: flex;
-  gap: 10px;
-}
-
-.edit-btn,
-.delete-btn {
-  font-size: 16px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.3s ease, transform 0.2s ease;
-}
-
-.edit-btn {
-  background: linear-gradient(135deg, #4a90e2, #3a7bc8);
-  color: white;
-}
-
-.edit-btn:hover {
-  background: linear-gradient(135deg, #3a7bc8, #4a90e2);
-  transform: scale(1.05);
-}
-
-.delete-btn {
-  background: linear-gradient(135deg, #e63946, #c82333);
-  color: white;
-}
-
-.delete-btn:hover {
-  background: linear-gradient(135deg, #c82333, #e63946);
-  transform: scale(1.05);
+  gap: 15px; 
 }
 
 /* Modal Styling */
@@ -350,36 +321,6 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   margin-top: 25px;
-}
-
-.save-btn,
-.cancel-btn {
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s ease, 0.3s ease;
-  min-width: 120px;
-}
-
-.save-btn {
-  background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  color: white;
-}
-
-.save-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
-}
-
-.cancel-btn {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.cancel-btn:hover {
-  background: #d0d0d0;
+  gap: 15px; /* Increased gap between buttons */
 }
 </style>

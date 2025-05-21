@@ -127,17 +127,21 @@ const handleManageItems = () => {
 /* Button styling */
 .admin-box button {
   background: linear-gradient(135deg, #8B5E3C, #6A3E2B);
-  transition: transform 0.2s ease-in-out, background-color 0.3s;
-  color: white;;
+  color: white;
   border: none;
-  padding: 12px;
+  padding: 12px 20px;
   border-radius: 8px;
-  font-size: 18px;
-  margin-top: 20px; 
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, background-color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .admin-box button:hover {
   transform: scale(1.05);
-  background: linear-gradient(135deg, #6A3E2B, #8B5E3C)
+  background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
 </style>
