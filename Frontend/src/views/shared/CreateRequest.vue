@@ -224,16 +224,14 @@ export default {
 /* Font for text */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
-/* Create Request container styling */
 .create-request-container {
   text-align: center;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C; 
-  max-width: 100%; /* optional, ensures full width for container */
+  max-width: 100%; 
   padding: 50px 20px;
 }
 
-/* Centered content box */
 .content-box {
   background-color: #f9f3e8;
   border-radius: 15px;
