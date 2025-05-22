@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a single API instance to use throughout the app
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:5000',  // Your Flask backend URL
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000',  // Your Flask backend URL
   headers: {
     'Content-Type': 'application/json',
   },
