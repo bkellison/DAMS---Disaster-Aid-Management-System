@@ -41,6 +41,19 @@
         </div>
 
         <div class="form-group">
+          <label>Preferred Matching Method:</label>
+          <select v-model="preferredMatchType" required>
+            <option value="" disabled>-- Select matching preference --</option>
+            <option v-for="matchType in matchTypes" :key="matchType.match_type_id" :value="matchType.match_type_id">
+              {{ matchType.name }} - {{ matchType.description }}
+            </option>
+          </select>
+          <p class="help-text">
+            This helps administrators know your preference when automatically matching your request with available donations.
+          </p>
+        </div>
+
+        <div class="form-group">
           <label>Additional Details:</label>
           <textarea v-model="details" rows="4" placeholder="Describe your specific needs..."></textarea>
         </div>
@@ -74,19 +87,26 @@ export default {
     const selectedItem = ref(null);
     const quantity = ref(1);
     const details = ref('');
+    const preferredMatchType = ref(''); // New field
 
     // Available options
     const events = ref([]);
     const categories = ref([]);
     const items = ref([]);
+    const matchTypes = ref([]); // New field
 
-    // Load available events on mount
+    // Load available events and match types on mount
     onMounted(async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:5000/getActiveEvents');
-        events.value = response.data || [];
+        // Load events
+        const eventsResponse = await axios.get('http://127.0.0.1:5000/getActiveEvents');
+        events.value = eventsResponse.data || [];
+
+        // Load match types
+        const matchTypesResponse = await axios.get('http://127.0.0.1:5000/getMatchTypes');
+        matchTypes.value = matchTypesResponse.data || [];
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching initial data:', error);
       }
     });
 
@@ -151,10 +171,11 @@ export default {
         user_id: authStore.userId,
         event_id: selectedEvent.value,
         category_id: selectedCategory.value,
-        item_id: selectedItem.value || null, // Include item_id if selected
+        item_id: selectedItem.value || null,
         quantity: quantity.value,
         details: details.value,
-        status: 'pending'
+        status: 'pending',
+        preferred_match_type_id: preferredMatchType.value // New field
       };
 
       try {
@@ -174,7 +195,11 @@ export default {
         }
       } catch (error) {
         console.error('Error submitting request:', error);
-        alert('Error submitting request. Please try again later.');
+        if (error.response && error.response.data && error.response.data.error) {
+          alert(`Error: ${error.response.data.error}`);
+        } else {
+          alert('Error submitting request. Please try again later.');
+        }
       }
     };
 
@@ -184,9 +209,11 @@ export default {
       selectedItem,
       quantity,
       details,
+      preferredMatchType, // New field
       events,
       categories,
       items,
+      matchTypes, // New field
       submitRequest
     };
   }
@@ -202,17 +229,19 @@ export default {
   text-align: center;
   font-family: 'Poppins', sans-serif;
   color: #8B5E3C; 
-  max-width: 600px;
-  margin: auto;
+  max-width: 100%; /* optional, ensures full width for container */
   padding: 50px 20px;
 }
 
+/* Centered content box */
 .content-box {
   background-color: #f9f3e8;
   border-radius: 15px;
   padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
+  width: 700px;
+  margin: 0 auto; /* This centers the box horizontally */
 }
 
 /* Create Request Header Styling */
@@ -264,6 +293,13 @@ input, select, textarea {
   font-family: 'Poppins', sans-serif;
   background-color: white;
   width: 100%;
+}
+
+.help-text {
+  font-size: 14px;
+  color: #6A3E2B;
+  font-style: italic;
+  margin-top: 5px;
 }
 
 .auth-actions {

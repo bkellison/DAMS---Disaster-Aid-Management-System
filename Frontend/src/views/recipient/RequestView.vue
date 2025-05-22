@@ -29,6 +29,7 @@ onMounted(() => {
 const createNewRequest = () => {
   router.push({ path: `/create-request` });
 }
+
 const getStatusClass = (status) => {
   const lowerStatus = (status || 'pending').toLowerCase();
   switch (lowerStatus) {
@@ -38,6 +39,21 @@ const getStatusClass = (status) => {
       return 'status-delivered';
     default:
       return 'status-pending';
+  }
+}
+
+const getMatchTypeBadgeClass = (matchTypeName) => {
+  if (!matchTypeName) return 'match-type-none';
+  const lowerName = matchTypeName.toLowerCase();
+  switch (lowerName) {
+    case 'nearest':
+      return 'match-type-nearest';
+    case 'quickest':
+      return 'match-type-quickest';
+    case 'fulfillment':
+      return 'match-type-fulfillment';
+    default:
+      return 'match-type-default';
   }
 }
 
@@ -66,6 +82,7 @@ const getStatusClass = (status) => {
                         <th>Item</th>
                         <th>Qty Remaining</th>
                         <th>Status</th>
+                        <th>Preferred Match</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,7 +90,7 @@ const getStatusClass = (status) => {
                         <td>{{ request.event_name }}</td>
                         <td>{{ request.location }}</td>
                         <td>{{ request.category_name }}</td>
-                        <td>{{ request.item_name }}</td>
+                        <td>{{ request.item_name || 'Any item in category' }}</td>
                         <td>{{ request.request_quantity_remaining }}</td>
                         <td>
                             <span 
@@ -83,6 +100,17 @@ const getStatusClass = (status) => {
                                 ]"
                             >
                                 {{ request.request_status?.toLowerCase() || 'pending' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span 
+                                :class="[
+                                'match-type-badge',
+                                getMatchTypeBadgeClass(request.preferred_match_type_name)
+                                ]"
+                                :title="request.preferred_match_type_name ? `You requested ${request.preferred_match_type_name} matching` : 'No preference specified'"
+                            >
+                                {{ request.preferred_match_type_name || 'Not specified' }}
                             </span>
                         </td>
                     </tr>
@@ -103,7 +131,7 @@ const getStatusClass = (status) => {
     text-align: center;
     font-family: 'Poppins', sans-serif;
     color: #5c4033; 
-    max-width: 1000px;
+    max-width: 1200px;
     margin: auto;
     padding: 50px 20px; 
 }
@@ -169,6 +197,7 @@ const getStatusClass = (status) => {
     background-color: #f5e1c5;
     color: #5c4033;
     text-align: center;
+    font-weight: 600;
 }
 
 .requests-table td {
@@ -178,15 +207,15 @@ const getStatusClass = (status) => {
 }
 
 .status-label {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  color: white;
-  text-transform: capitalize;
-  min-width: 80px;
-  text-align: center;
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    text-transform: capitalize;
+    min-width: 80px;
+    text-align: center;
 }
 
 .status-pending {
@@ -202,5 +231,77 @@ const getStatusClass = (status) => {
 .status-delivered {
     color: #2e8b57;
     font-weight: bold;
+}
+
+/* Match type badge styling */
+.match-type-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: white;
+    text-transform: capitalize;
+    min-width: 80px;
+    text-align: center;
+    cursor: help;
+}
+
+.match-type-nearest {
+    background: linear-gradient(135deg, #0077cc, #005fa3);
+}
+
+.match-type-quickest {
+    background: linear-gradient(135deg, #e6a23c, #cc8500);
+}
+
+.match-type-fulfillment {
+    background: linear-gradient(135deg, #2e8b57, #227548);
+}
+
+.match-type-none, .match-type-default {
+    background-color: #999;
+    color: #fff;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .requests-container {
+        padding: 20px 10px;
+    }
+    
+    .content-box {
+        padding: 20px;
+    }
+    
+    .requests-header {
+        font-size: 24px;
+        padding: 12px 30px;
+    }
+    
+    .requests-table {
+        font-size: 14px;
+    }
+    
+    .requests-table th,
+    .requests-table td {
+        padding: 8px 4px;
+    }
+    
+    .match-type-badge,
+    .status-label {
+        font-size: 12px;
+        padding: 4px 8px;
+        min-width: 60px;
+    }
+}
+
+/* Table overflow for mobile */
+@media (max-width: 600px) {
+    .requests-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
 }
 </style>

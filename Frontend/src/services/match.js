@@ -39,5 +39,16 @@ export const matchService = {
       console.error('Error getting match types:', error);
       throw error;
     }
+  },
+
+  // New method to get all match types for request creation
+  async getMatchTypes() {
+    try {
+      const response = await api.get('/getMatchTypes');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting all match types:', error);
+      throw error;
+    }
   }
 };

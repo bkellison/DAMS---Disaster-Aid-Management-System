@@ -269,12 +269,13 @@ def create_request():
         user_id = data_payload.get("user_id")
         event_id = data_payload.get("event_id")
         category_id = data_payload.get("category_id")
-        item_id = data_payload.get("item_id")  # New field for specific item
+        item_id = data_payload.get("item_id")  
         quantity = data_payload.get("quantity")
         details = data_payload.get("details", "")
         status = data_payload.get("status", "pending")
+        preferred_match_type_id = data_payload.get("preferred_match_type_id")  # New field
 
-        if not all([user_id, event_id, category_id, quantity]):
+        if not all([user_id, event_id, category_id, quantity, preferred_match_type_id]):
             return jsonify({"error": "Missing required fields"}), 400
 
         event_query = text("SELECT * FROM dr_events.disaster_event WHERE event_id = :event_id AND is_active = 1")
@@ -295,6 +296,13 @@ def create_request():
         if not category:
             return jsonify({"error": "Category not available for this event"}), 400
 
+        # Validate match type exists
+        match_type_query = text("SELECT * FROM dr_events.match_type WHERE match_type_id = :match_type_id")
+        match_type = db.session.execute(match_type_query, {"match_type_id": preferred_match_type_id}).fetchone()
+
+        if not match_type:
+            return jsonify({"error": "Invalid match type"}), 400
+
         # If item_id is provided, verify it belongs to the selected category
         if item_id:
             item_query = text("""
@@ -311,18 +319,19 @@ def create_request():
 
         insert_query = text("""
             INSERT INTO dr_events.request 
-            (user_id, event_id, category_id, item_id, quantity, details, status, created_at) 
-            VALUES (:user_id, :event_id, :category_id, :item_id, :quantity, :details, :status, NOW())
+            (user_id, event_id, category_id, item_id, quantity, details, status, preferred_match_type_id, created_at) 
+            VALUES (:user_id, :event_id, :category_id, :item_id, :quantity, :details, :status, :preferred_match_type_id, NOW())
         """)
 
         db.session.execute(insert_query, {
             "user_id": user_id,
             "event_id": event_id,
             "category_id": category_id,
-            "item_id": item_id,  # Can be NULL if not specified
+            "item_id": item_id,
             "quantity": quantity,
             "details": details,
-            "status": status
+            "status": status,
+            "preferred_match_type_id": preferred_match_type_id
         })
 
         db.session.commit()
@@ -673,6 +682,7 @@ def get_requests_for_response():
         query = text("""
             SELECT r.request_id, r.details, r.quantity, r.status, u.username, 
                 e.event_name, c.category_name, i.name as item_name,
+                r.preferred_match_type_id, mt.name as preferred_match_type_name, mt.description as preferred_match_type_description,
                 CASE WHEN current_matches.request_id IS NULL THEN r.quantity
 				WHEN r.quantity - current_matches.total_matched < 0 THEN 0
 				ELSE IFNULL(r.quantity, 0) - IFNULL(current_matches.total_matched, 0) END AS request_quantity_remaining
@@ -680,7 +690,8 @@ def get_requests_for_response():
             JOIN user u ON r.user_id = u.user_id
             JOIN dr_events.disaster_event e ON r.event_id = e.event_id
             JOIN dr_events.category c ON r.category_id = c.category_id
-            LEFT JOIN dr_events.item i ON r.item_id = i.item_id     
+            LEFT JOIN dr_events.item i ON r.item_id = i.item_id
+            LEFT JOIN dr_events.match_type mt ON r.preferred_match_type_id = mt.match_type_id     
             LEFT OUTER JOIN
 			(
 				select `match`.request_id, SUM(`match`.match_quantity) AS total_matched
@@ -705,7 +716,10 @@ def get_requests_for_response():
                 "requested_by": row.username,
                 "event_name": row.event_name,
                 "category": row.category_name,
-                "item_name": row.item_name,  # Will be None if no specific item
+                "item_name": row.item_name,
+                "preferred_match_type_id": row.preferred_match_type_id,
+                "preferred_match_type_name": row.preferred_match_type_name,
+                "preferred_match_type_description": row.preferred_match_type_description,
                 "request_quantity_remaining": row.request_quantity_remaining
             }
             for row in results
@@ -1113,4 +1127,30 @@ def create_admin_match():
         db.session.rollback()
         print(f"General error in createAdminMatch: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+
+@api_routes.route('/getMatchTypes', methods=["GET"])
+def get_match_types():
+    db = get_db()
+    try:
+        # Get all match types for selection
+        query = text("SELECT match_type_id, name, description FROM dr_events.match_type WHERE type = 'auto'")
+        match_types = db.session.execute(query).fetchall()
+
+        match_types_list = [
+            {
+                "match_type_id": mt.match_type_id,
+                "name": mt.name,
+                "description": mt.description
+            }
+            for mt in match_types
+        ]
+
+        return jsonify(match_types_list), 200
+
+    except SQLAlchemyError as ex:
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
+
     

@@ -17,6 +17,11 @@
           <p><strong>Quantity Remaining:</strong> {{ selectedRequest.request_quantity_remaining }}</p>
           <p v-if="selectedRequest.requester_zipcode"><strong>Recipient Location:</strong> {{ selectedRequest.requester_zipcode }}</p>
           <p v-if="selectedRequest.request_details"><strong>Details:</strong> {{ selectedRequest.request_details }}</p>
+          
+          <!-- Show recipient's preferred matching method -->
+          <p v-if="selectedRequest.preferred_match_type_name">
+            <strong>Recipient's Preferred Method:</strong> {{ capitalizeFirstLetter(selectedRequest.preferred_match_type_name) }}
+          </p>
         </div>
 
         <!-- Show inventory breakdown -->
@@ -97,7 +102,13 @@
           <h4>Match Algorithms</h4>
           <div class="match-options">
             <div v-for="matchType in matchTypes" :key="matchType.match_type_id" class="match-option">
-              <button class="match-btn" @click="createAutoMatch(selectedRequest, matchType)">
+              <button 
+                :class="[
+                  'match-btn',
+                  { 'match-btn-preferred': isPreferredMethod(matchType) }
+                ]"
+                @click="createAutoMatch(selectedRequest, matchType)"
+              >
                 <span class="match-name">{{ capitalizeFirstLetter(matchType.name) }}</span>
                 <span class="match-description">{{ matchType.description }}</span>
               </button>
@@ -133,6 +144,11 @@ const combinedOptions = ref({
   available_pledges: []
 });
 const inventoryPriority = ref('auto'); // Default to auto
+
+// Check if a match type is the preferred one
+const isPreferredMethod = (matchType) => {
+  return selectedRequest.value.preferred_match_type_id === matchType.match_type_id;
+};
 
 // Helper function to capitalize first letter
 function capitalizeFirstLetter(string) {
@@ -280,6 +296,14 @@ onMounted(() => {
   color: #8B5E3C;
   margin-bottom: 15px;
   font-size: 22px;
+}
+
+.preferred-match-info {
+  background-color: #f5e1c5;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  border: 1px solid #d3c0a3;
 }
 
 .inventory-breakdown {
@@ -438,6 +462,18 @@ onMounted(() => {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   background: linear-gradient(to right, #f0d5b0, #f5e1c5);
+}
+
+.match-btn-preferred {
+  background: linear-gradient(to right, #d4b896, #c9a876) !important;
+  border: 2px solid #a88b5a !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.match-btn-preferred:hover {
+  background: linear-gradient(to right, #c9a876, #b8975c) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2) !important;
 }
 
 .match-name {
