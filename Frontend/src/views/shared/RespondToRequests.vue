@@ -40,7 +40,11 @@ const requests = ref([]);
 const loadRequests = async () => {
   try {
     const response = await axios.get('http://127.0.0.1:5000/getRequestsForResponse');
-    requests.value = response.data.filter(i => i.request_quantity_remaining > 0) || [];
+    // Only filter out requests where remaining quantity is 0 or less (completely fulfilled)
+    // Keep requests that still have remaining quantity > 0 (partially fulfilled or unfulfilled)
+    requests.value = response.data.filter(request => 
+      request.request_quantity_remaining > 0
+    ) || [];
   } catch (error) {
     console.error('Error fetching requests:', error);
   }
@@ -158,6 +162,4 @@ if (localStorage.getItem('reloadRequests')) {
   margin: 10px 0;
   line-height: 1.5;
 }
-
-
 </style>

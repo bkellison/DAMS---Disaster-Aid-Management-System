@@ -31,11 +31,18 @@
             <div v-if="showRequests" class="app-nav__dropdown-menu">
               <RouterLink to="/respond-to-requests" active-class="active-link">Manage Requests</RouterLink>
               <RouterLink to="/create-request" active-class="active-link">Create Request</RouterLink>
-
             </div>
           </div>
           
-          <RouterLink to="/admin/manage-items" active-class="active-link">Manage Items</RouterLink>
+          <div class="app-nav__dropdown">
+            <a href="#" @click.prevent="toggleItems" class="app-nav__link">
+              Items & Matches <span class="dropdown-arrow">{{ showItems ? '▲' : '▼' }}</span>
+            </a>
+            <div v-if="showItems" class="app-nav__dropdown-menu">
+              <RouterLink to="/admin/manage-items" active-class="active-link">Manage Donation Items</RouterLink>
+              <RouterLink to="/match-view" active-class="active-link">View Matches</RouterLink>
+            </div>
+          </div>
         </template>
         
         <!-- Donor links -->
@@ -70,12 +77,14 @@ const router = useRouter();
 // Track dropdown states with simple refs for more reliable reactivity
 const showEvents = ref(false);
 const showRequests = ref(false);
+const showItems = ref(false);
 
 // Toggle functions for each dropdown
 const toggleEvents = () => {
   showEvents.value = !showEvents.value;
   if (showEvents.value) {
     showRequests.value = false;
+    showItems.value = false;
   }
 };
 
@@ -83,6 +92,15 @@ const toggleRequests = () => {
   showRequests.value = !showRequests.value;
   if (showRequests.value) {
     showEvents.value = false;
+    showItems.value = false;
+  }
+};
+
+const toggleItems = () => {
+  showItems.value = !showItems.value;
+  if (showItems.value) {
+    showEvents.value = false;
+    showRequests.value = false;
   }
 };
 
@@ -91,6 +109,7 @@ const handleClickOutside = (event) => {
   if (!event.target.closest('.app-nav__dropdown')) {
     showEvents.value = false;
     showRequests.value = false;
+    showItems.value = false;
   }
 };
 
@@ -98,6 +117,7 @@ const handleClickOutside = (event) => {
 watch(() => router.currentRoute.value.path, () => {
   showEvents.value = false;
   showRequests.value = false;
+  showItems.value = false;
 });
 
 // Add and remove event listeners properly

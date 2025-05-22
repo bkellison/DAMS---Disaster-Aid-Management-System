@@ -97,7 +97,7 @@ const getStatusClass = (status) => {
     text-align: center;
     font-family: 'Poppins', sans-serif;
     color: #f5e1c5; 
-    max-width: 1000px;
+    max-width: 1400px; /* Increased from 1000px */
     margin: auto;
     padding: 50px 20px; 
 }
@@ -108,6 +108,8 @@ const getStatusClass = (status) => {
     border-radius: 12px;
     margin-top: 40px; 
     border: 10px solid #c9b28e;
+    min-width: 1200px; /* Added minimum width */
+    width: 100%; /* Ensure it takes full available width */
 }
   
 .match-header {
@@ -139,25 +141,35 @@ const getStatusClass = (status) => {
     margin-top: 30px;
     border-collapse: collapse;
     border: 5px solid #c9b28e;
+    min-width: 1000px; /* Added minimum width for table */
+    table-layout: auto; /* Allow table to expand as needed */
 }
 
 .match-table th,
 .match-table td {
-    padding: 12px 16px;
+    padding: 15px 20px; /* Increased padding from 12px 16px */
     border-bottom: 1px solid #ddd;
     font-size: 16px;
+    white-space: nowrap; /* Prevent text wrapping */
+    text-align: center;
 }
 
 .match-table th {
     background-color: #f5e1c5;
     color: #5c4033;
-    text-align: center;
+    font-weight: 600; /* Made headers more prominent */
 }
 
 .match-table td {
     background-color: #fdf6ee;
     color: #5c4033;
-    text-align: center;
+}
+
+/* Make action column slightly wider for buttons */
+.match-table th:last-child,
+.match-table td:last-child {
+    min-width: 180px;
+    white-space: normal; /* Allow button text to wrap if needed */
 }
 
 .status-pending {
@@ -173,5 +185,58 @@ const getStatusClass = (status) => {
 .status-delivered {
     color: #2e8b57;
     font-weight: bold;
+}
+
+/* Add responsive design for smaller screens */
+@media (max-width: 1440px) {
+  .match-container {
+    max-width: 95%;
+    padding: 30px 15px;
+  }
+  
+  .match-wrapper {
+    min-width: auto;
+    padding: 30px;
+  }
+  
+  .match-table {
+    min-width: auto;
+    font-size: 14px;
+  }
+  
+  .match-table th,
+  .match-table td {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .match-container {
+    padding: 20px 10px;
+  }
+  
+  .match-wrapper {
+    padding: 20px;
+    border: 5px solid #c9b28e;
+  }
+  
+  .match-header {
+    font-size: 24px;
+    padding: 12px 30px;
+  }
+  
+  .match-table {
+    font-size: 12px;
+  }
+  
+  .match-table th,
+  .match-table td {
+    padding: 8px 6px;
+  }
+  
+  .match-table th:last-child,
+  .match-table td:last-child {
+    min-width: 120px;
+  }
 }
 </style>

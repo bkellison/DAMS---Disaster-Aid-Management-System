@@ -35,8 +35,9 @@ def update_shipping_status():
         if user_role == 'Donor' and shipping_status == 'delivered':
             return jsonify({'error': 'Donors can only mark items as shipped'}), 403
             
-        # Only admins can change status to delivered
-        if shipping_status == 'delivered' and (user_role != 'Admin' or  user_role != 'Recipient'):
+        # Only admins or recipients can change status to delivered
+        # FIXED: Changed OR to AND - now only denies access if user is NEITHER admin NOR recipient
+        if shipping_status == 'delivered' and (user_role != 'Admin' and user_role != 'Recipient'):
             return jsonify({'error': 'Only admins or recipients can mark items as delivered'}), 403
         
         # Convert shipping_date string to datetime if provided

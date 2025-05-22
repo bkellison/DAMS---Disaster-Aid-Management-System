@@ -561,40 +561,119 @@ def get_matches():
     user_id = request.args.get('user_id')
     try:
         if not user_id:
-            return jsonify({"error": "Missing requird fields"}), 400
+            return jsonify({"error": "Missing required fields"}), 400
        
-        get_matches_sp = "CALL dr_events.get_matches(:param_user_id)"
-        result = db.session.execute((text(get_matches_sp)), ({"param_user_id": user_id}))
-
-        try:
-            rows = result.fetchall()
-
-            if rows:            
-                columns = result.keys()
-
-                matches = [dict(zip(columns, row)) for row in rows]
+        # Instead of calling stored procedure, use direct query to ensure fresh data
+        # Get user role first
+        user_role_query = text("SELECT role FROM dr_admin.user WHERE user_id = :user_id")
+        user_role_result = db.session.execute(user_role_query, {"user_id": user_id}).fetchone()
+        
+        if not user_role_result:
+            return jsonify({"error": "User not found"}), 404
             
-                return jsonify(matches), 200  
-            return jsonify([]), 200  # Return empty array instead of just []     
-        except Exception as ex:   
-            return jsonify([]), 200  # Return empty array instead of just []
+        user_role = user_role_result.role
+        
+        # Build query based on user role to match stored procedure logic
+        if user_role == 'Donor':
+            query = text("""
+                SELECT 
+                    m.match_id,
+                    m.pledge_id,
+                    de.event_id,
+                    de.event_name,
+                    de.location,
+                    i.name AS item_name,
+                    i.item_id,
+                    c.category_id,
+                    c.category_name,
+                    m.request_id,
+                    m.match_status,
+                    m.match_quantity,
+                    m.created_at,
+                    m.shipping_status
+                FROM dr_events.match m
+                JOIN dr_events.request r ON m.request_id = r.request_id
+                JOIN dr_events.disaster_event de ON r.event_id = de.event_id
+                JOIN dr_events.category c ON r.category_id = c.category_id
+                LEFT JOIN dr_events.pledge p ON m.pledge_id = p.pledge_id
+                LEFT JOIN dr_events.item i ON r.item_id = i.item_id
+                WHERE (p.user_id = :user_id OR m.pledge_id IS NULL)
+                  AND m.canceled_flag = 0
+            """)
+        elif user_role == 'Recipient':
+            query = text("""
+                SELECT 
+                    m.match_id,
+                    m.pledge_id,
+                    de.event_id,
+                    de.event_name,
+                    de.location,
+                    i.name AS item_name,
+                    i.item_id,
+                    c.category_id,
+                    c.category_name,
+                    m.request_id,
+                    m.match_status,
+                    m.match_quantity,
+                    m.created_at,
+                    m.shipping_status
+                FROM dr_events.match m
+                JOIN dr_events.request r ON m.request_id = r.request_id
+                JOIN dr_events.disaster_event de ON r.event_id = de.event_id
+                JOIN dr_events.category c ON r.category_id = c.category_id
+                LEFT JOIN dr_events.item i ON r.item_id = i.item_id
+                WHERE r.user_id = :user_id
+                  AND m.canceled_flag = 0
+            """)
+        else:  # Admin
+            query = text("""
+                SELECT 
+                    m.match_id,
+                    m.pledge_id,
+                    de.event_id,
+                    de.event_name,
+                    de.location,
+                    i.name AS item_name,
+                    i.item_id,
+                    c.category_id,
+                    c.category_name,
+                    m.request_id,
+                    m.match_status,
+                    m.match_quantity,
+                    m.created_at,
+                    m.shipping_status
+                FROM dr_events.match m
+                JOIN dr_events.request r ON m.request_id = r.request_id
+                JOIN dr_events.disaster_event de ON r.event_id = de.event_id
+                JOIN dr_events.category c ON r.category_id = c.category_id
+                LEFT JOIN dr_events.item i ON r.item_id = i.item_id
+                WHERE m.canceled_flag = 0
+            """)
+        
+        result = db.session.execute(query, {"user_id": user_id})
+        rows = result.fetchall()
+
+        if rows:            
+            columns = result.keys()
+            matches = [dict(zip(columns, row)) for row in rows]
+            return jsonify(matches), 200
+        else:
+            return jsonify([]), 200
         
     except SQLAlchemyError as ex:
         db.session.rollback()
-        # Handle database errors
         return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:        
-        # Handle other errors
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
-
+    
 @api_routes.route('/getRequestsForResponse', methods=["GET"])
 def get_requests_for_response():
     db = get_db()
     try:
         query = text("""
             SELECT r.request_id, r.details, r.quantity, r.status, u.username, 
-                e.event_name, c.category_name, i.name as item_name
-                ,CASE WHEN current_matches.request_id IS NULL THEN r.quantity
+                e.event_name, c.category_name, i.name as item_name,
+                CASE WHEN current_matches.request_id IS NULL THEN r.quantity
 				WHEN r.quantity - current_matches.total_matched < 0 THEN 0
 				ELSE IFNULL(r.quantity, 0) - IFNULL(current_matches.total_matched, 0) END AS request_quantity_remaining
             FROM dr_events.request r
@@ -609,7 +688,11 @@ def get_requests_for_response():
 				WHERE `match`.canceled_flag = 0
 				GROUP BY `match`.request_id
 			) current_matches ON r.request_id = current_matches.request_id        
-            WHERE r.status = 'pending' 
+            WHERE r.status IN ('pending', 'matched') 
+            AND (
+                current_matches.request_id IS NULL 
+                OR r.quantity > current_matches.total_matched
+            )
         """)
         results = db.session.execute(query).fetchall()
 
@@ -969,19 +1052,36 @@ def create_admin_match():
         if request_result.base_quantity < admin_quantity:
             return jsonify({"error": "Not enough admin inventory available"}), 400
         
-        # 3. Create the match record with a special flag for admin source
+        # 3. Get the shipping address for the recipient
+        address_query = text("""
+            SELECT concat_ws(' ',
+                   address_line1,
+                   address_line2,
+                   CONCAT_WS(', ',			
+                        city,
+                        state				
+                    ), zip_code) AS full_address
+            FROM dr_admin.user 
+            WHERE user_id = :user_id
+        """)
+        
+        address_result = db.session.execute(address_query, {"user_id": request_result.user_id}).fetchone()
+        shipping_address = address_result.full_address if address_result else None
+        
+        # 4. Create the match record - NOTE: No pledge_id for admin matches (NULL)
         match_query = text("""
             INSERT INTO dr_events.match
-            (request_id, match_status, match_quantity, shipping_status, is_admin_source)
-            VALUES (:request_id, 'matched', :admin_quantity, 'pending', 1)
+            (pledge_id, request_id, match_status, match_quantity, shipping_status, shipping_address, match_type_id)
+            VALUES (NULL, :request_id, 'matched', :admin_quantity, 'pending', :shipping_address, 1)
         """)
         
         db.session.execute(match_query, {
             "request_id": request_id,
-            "admin_quantity": admin_quantity
+            "admin_quantity": admin_quantity,
+            "shipping_address": shipping_address
         })
         
-        # 4. Update the item's base quantity
+        # 5. Update the item's base quantity
         update_item_query = text("""
             UPDATE dr_events.item
             SET quantity = quantity - :admin_quantity
@@ -993,7 +1093,7 @@ def create_admin_match():
             "admin_quantity": admin_quantity
         })
         
-        # 5. Update the request's status
+        # 6. Update the request's status
         update_request_query = text("""
             UPDATE dr_events.request
             SET status = 'matched'
@@ -1007,6 +1107,10 @@ def create_admin_match():
         return jsonify({"message": "Match created successfully from admin inventory"}), 200
     except SQLAlchemyError as ex:
         db.session.rollback()
+        print(f"Database error in createAdminMatch: {ex}")
         return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:
+        db.session.rollback()
+        print(f"General error in createAdminMatch: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
