@@ -11,12 +11,22 @@ def create_event():
         new_event = Event(
             event_name=data['name'],
             type=data['type'],
-            location=data['location'],
+            location=data['location'],  # This will be the combined location string
             start_date=data['startDate'],
             end_date=data['endDate'],
             description=data.get('description', ''),  # Optional description
             is_active=True
         )
+
+        # Add individual location fields if they exist
+        if 'address' in data:
+            new_event.address = data['address']
+        if 'city' in data:
+            new_event.city = data['city']
+        if 'state' in data:
+            new_event.state = data['state']
+        if 'zipCode' in data:
+            new_event.zip_code = data['zipCode']
 
         db.session.add(new_event)
         db.session.flush()
@@ -55,11 +65,15 @@ def get_events():
                 'event_id': e.event_id,
                 'name': e.event_name,
                 'location': e.location,
-                'start_date': e.start_date.strftime('%Y-%m-%d'),
-                'end_date': e.end_date.strftime('%Y-%m-%d'),
+                'address': getattr(e, 'address', ''),
+                'city': getattr(e, 'city', ''),
+                'state': getattr(e, 'state', ''),
+                'zip_code': getattr(e, 'zip_code', ''),
+                'start_date': e.start_date.strftime('%Y-%m-%d') if e.start_date else None,
+                'end_date': e.end_date.strftime('%Y-%m-%d') if e.end_date else None,
                 'description': e.description,
                 'is_active': e.is_active,
-                'categories': category_names  # This replaces 'type'
+                'categories': category_names
             })
 
         return jsonify(event_list), 200
@@ -70,7 +84,7 @@ def get_events():
 
 @event_routes.route('/categories', methods=['GET'])
 def get_categories():
-    from disaster_relief_app.models import Category  # or wherever Category is defined
+    from disaster_relief_app.models import Category
 
     try:
         categories = Category.query.all()
@@ -105,27 +119,43 @@ def delete_event(event_id):
 
 @event_routes.route('/admin/events/<int:event_id>', methods=['PUT'])
 def update_event(event_id):
-    from disaster_relief_app.models import EventCategory  # make sure this is imported
+    from disaster_relief_app.models import EventCategory
 
     data = request.get_json()
     event = Event.query.get(event_id)
     if not event:
         return jsonify({'error': 'Event not found'}), 404
 
-    event.event_name = data['name']
-    event.location = data['location']
-    event.start_date = data['start_date']
-    event.end_date = data['end_date']
+    try:
+        # Update basic event information
+        event.event_name = data['name']
+        event.location = data.get('location', '')
+        event.start_date = data['start_date']
+        event.end_date = data['end_date']
 
-    # Remove existing category associations
-    EventCategory.query.filter_by(event_id=event_id).delete()
+        # Update individual location fields if provided
+        if 'address' in data:
+            event.address = data['address']
+        if 'city' in data:
+            event.city = data['city']
+        if 'state' in data:
+            event.state = data['state']
+        if 'zipCode' in data:
+            event.zip_code = data['zipCode']
 
-    # Add new category associations
-    for cat_id in data.get('categoryIds', []):
-        db.session.add(EventCategory(event_id=event_id, category_id=cat_id))
+        # Remove existing category associations
+        EventCategory.query.filter_by(event_id=event_id).delete()
 
-    db.session.commit()
-    return jsonify({'message': 'Event and categories updated'}), 200
+        # Add new category associations
+        for cat_id in data.get('categoryIds', []):
+            db.session.add(EventCategory(event_id=event_id, category_id=cat_id))
+
+        db.session.commit()
+        return jsonify({'message': 'Event and categories updated'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print("Error updating event:", e)
+        return jsonify({'error': 'Failed to update event'}), 500
 
 @event_routes.route('/admin/events/<int:event_id>/categories', methods=['GET'])
 def get_event_categories(event_id):
@@ -148,4 +178,3 @@ def get_event_categories(event_id):
     except Exception as e:
         print(f"Error fetching categories for event {event_id}:", e)
         return jsonify({'error': 'Failed to fetch event categories'}), 500
-

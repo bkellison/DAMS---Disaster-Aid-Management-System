@@ -681,7 +681,7 @@ def get_requests_for_response():
     try:
         query = text("""
             SELECT r.request_id, r.details, r.quantity, r.status, u.username, 
-                e.event_name, c.category_name, i.name as item_name,
+                e.event_name, e.location as event_location, c.category_name, i.name as item_name,
                 r.preferred_match_type_id, mt.name as preferred_match_type_name, mt.description as preferred_match_type_description,
                 CASE WHEN current_matches.request_id IS NULL THEN r.quantity
 				WHEN r.quantity - current_matches.total_matched < 0 THEN 0
@@ -715,6 +715,7 @@ def get_requests_for_response():
                 "status": row.status,
                 "requested_by": row.username,
                 "event_name": row.event_name,
+                "event_location": row.event_location,  # Added event location
                 "category": row.category_name,
                 "item_name": row.item_name,
                 "preferred_match_type_id": row.preferred_match_type_id,

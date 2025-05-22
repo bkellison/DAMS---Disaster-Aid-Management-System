@@ -9,6 +9,9 @@
       <ul class="request-list">
         <li v-for="request in requests" :key="request.request_id" class="request-card">
           <h3 class="request-title">{{ request.event_name }} - {{ request.category }}</h3>
+          <div class="request-location">
+            <strong>Location:</strong> {{ request.event_location || 'Location not specified' }}
+          </div>
           <p v-if="request.item_name"><strong>Specific Item:</strong> {{ request.item_name }}</p>
           <p><strong>Requested Quantity:</strong> {{ request.quantity }}</p>
           <p v-if="request.details && request.details.trim() !== ''"><strong>Details:</strong> {{ request.details }}</p>
@@ -150,6 +153,16 @@ if (localStorage.getItem('reloadRequests')) {
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 15px;
+}
+
+.request-location {
+  background-color: #e8f5e8;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin: 10px 0 15px 0;
+  border-left: 4px solid #2e8b57;
+  font-size: 16px;
+  color: #2e8b57;
 }
 
 .button-group {

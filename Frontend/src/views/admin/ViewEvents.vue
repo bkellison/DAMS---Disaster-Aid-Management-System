@@ -12,8 +12,8 @@
           <p><strong>Categories:</strong> {{ event.categories.join(', ') }}</p>
           <p><strong>Location:</strong> {{ event.location }}</p>
           <p>
-            <strong>Start:</strong> {{ event.start_date }} |
-            <strong>End:</strong> {{ event.end_date }}
+            <strong>Start:</strong> {{ formatDate(event.start_date) }} |
+            <strong>End:</strong> {{ formatDate(event.end_date) }}
           </p>
           <p><strong>Status:</strong> {{ event.is_active ? 'Active' : 'Inactive' }}</p>
 
@@ -36,9 +36,36 @@
           <input id="event-name" v-model="selectedEvent.name" placeholder="Event Name" required />
         </div>
         
-        <div class="form-group">
-          <label for="event-location">Location:</label>
-          <input id="event-location" v-model="selectedEvent.location" placeholder="Location" required />
+        <!-- Updated location editing fields -->
+        <div class="location-section">
+          <h4 class="section-title">Event Location</h4>
+          
+          <div class="form-group">
+            <label for="event-address">Street Address:</label>
+            <input id="event-address" v-model="selectedEvent.address" placeholder="Street Address" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="event-city">City:</label>
+            <input id="event-city" v-model="selectedEvent.city" placeholder="City" required />
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-state">State:</label>
+              <select id="event-state" v-model="selectedEvent.state" required>
+                <option disabled value="">Select State</option>
+                <option v-for="state in stateOptions" :key="state.value" :value="state.value">
+                  {{ state.label }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="event-zip">ZIP Code:</label>
+              <input id="event-zip" v-model="selectedEvent.zipCode" placeholder="ZIP Code" required />
+            </div>
+          </div>
         </div>
         
         <div class="form-group date-group">
@@ -80,6 +107,105 @@ const events = ref([])
 const categories = ref([])
 const selectedEvent = ref(null)
 
+// State options for editing
+const stateOptions = [
+  { value: 'AL', label: 'Alabama' },
+  { value: 'AK', label: 'Alaska' },
+  { value: 'AZ', label: 'Arizona' },
+  { value: 'AR', label: 'Arkansas' },
+  { value: 'CA', label: 'California' },
+  { value: 'CO', label: 'Colorado' },
+  { value: 'CT', label: 'Connecticut' },
+  { value: 'DE', label: 'Delaware' },
+  { value: 'FL', label: 'Florida' },
+  { value: 'GA', label: 'Georgia' },
+  { value: 'HI', label: 'Hawaii' },
+  { value: 'ID', label: 'Idaho' },
+  { value: 'IL', label: 'Illinois' },
+  { value: 'IN', label: 'Indiana' },
+  { value: 'IA', label: 'Iowa' },
+  { value: 'KS', label: 'Kansas' },
+  { value: 'KY', label: 'Kentucky' },
+  { value: 'LA', label: 'Louisiana' },
+  { value: 'ME', label: 'Maine' },
+  { value: 'MD', label: 'Maryland' },
+  { value: 'MA', label: 'Massachusetts' },
+  { value: 'MI', label: 'Michigan' },
+  { value: 'MN', label: 'Minnesota' },
+  { value: 'MS', label: 'Mississippi' },
+  { value: 'MO', label: 'Missouri' },
+  { value: 'MT', label: 'Montana' },
+  { value: 'NE', label: 'Nebraska' },
+  { value: 'NV', label: 'Nevada' },
+  { value: 'NH', label: 'New Hampshire' },
+  { value: 'NJ', label: 'New Jersey' },
+  { value: 'NM', label: 'New Mexico' },
+  { value: 'NY', label: 'New York' },
+  { value: 'NC', label: 'North Carolina' },
+  { value: 'ND', label: 'North Dakota' },
+  { value: 'OH', label: 'Ohio' },
+  { value: 'OK', label: 'Oklahoma' },
+  { value: 'OR', label: 'Oregon' },
+  { value: 'PA', label: 'Pennsylvania' },
+  { value: 'RI', label: 'Rhode Island' },
+  { value: 'SC', label: 'South Carolina' },
+  { value: 'SD', label: 'South Dakota' },
+  { value: 'TN', label: 'Tennessee' },
+  { value: 'TX', label: 'Texas' },
+  { value: 'UT', label: 'Utah' },
+  { value: 'VT', label: 'Vermont' },
+  { value: 'VA', label: 'Virginia' },
+  { value: 'WA', label: 'Washington' },
+  { value: 'WV', label: 'West Virginia' },
+  { value: 'WI', label: 'Wisconsin' },
+  { value: 'WY', label: 'Wyoming' }
+];
+
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit' 
+  });
+};
+
+// Parse location string into components
+const parseLocationString = (locationString) => {
+  if (!locationString) {
+    return { address: '', city: '', state: '', zipCode: '' };
+  }
+  
+  // Try to parse "Address, City, State ZipCode" format
+  const parts = locationString.split(', ');
+  if (parts.length >= 3) {
+    const address = parts[0];
+    const city = parts[1];
+    const stateZipPart = parts[2];
+    
+    // Extract state and zip from "State ZipCode"
+    const stateZipMatch = stateZipPart.match(/^([A-Z]{2})\s+(.+)$/);
+    if (stateZipMatch) {
+      return {
+        address: address,
+        city: city,
+        state: stateZipMatch[1],
+        zipCode: stateZipMatch[2]
+      };
+    }
+  }
+  
+  // Fallback - just use the full string as address
+  return {
+    address: locationString,
+    city: '',
+    state: '',
+    zipCode: ''
+  };
+};
+
 // Close modal and reset selected event
 const closeModal = () => {
   selectedEvent.value = null;
@@ -120,9 +246,13 @@ const editEvent = async (event) => {
     const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`)
     const categoryIds = categoryRes.data.map(cat => cat.category_id)
 
+    // Parse the location string into components
+    const locationComponents = parseLocationString(event.location);
+
     selectedEvent.value = {
       ...event,
-      categoryIds
+      categoryIds,
+      ...locationComponents
     }
   } catch (error) {
     console.error('Error fetching event categories:', error)
@@ -132,7 +262,15 @@ const editEvent = async (event) => {
 
 const updateEvent = async () => {
   try {
-    await axios.put(`/api/admin/events/${selectedEvent.value.event_id}`, selectedEvent.value)
+    // Combine location fields back into a single string
+    const locationString = `${selectedEvent.value.address}, ${selectedEvent.value.city}, ${selectedEvent.value.state} ${selectedEvent.value.zipCode}`;
+    
+    const updateData = {
+      ...selectedEvent.value,
+      location: locationString
+    };
+    
+    await axios.put(`/api/admin/events/${selectedEvent.value.event_id}`, updateData)
     await fetchEvents()
     selectedEvent.value = null
     alert('Event updated successfully!')
@@ -173,7 +311,7 @@ onMounted(() => {
 }
 
 .description {
-  color: #6c757d; /* Gray color matching login page */
+  color: #6c757d;
   font-size: 16px;
   margin-bottom: 20px;
 }
@@ -262,11 +400,13 @@ onMounted(() => {
   background: #f9f3e8;
   padding: 30px;
   border-radius: 15px;
-  max-width: 550px;
+  max-width: 650px;
   width: 90%;
   font-family: 'Poppins', sans-serif;
   color: #5c4033;
   box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h3 {
@@ -276,8 +416,23 @@ onMounted(() => {
   color: #5c4033;
 }
 
+.location-section {
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px solid #e0e0e0;
+}
+
+.section-title {
+  color: #5c4033;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .form-group label {
@@ -285,6 +440,15 @@ onMounted(() => {
   margin-bottom: 8px;
   font-weight: 500;
   color: #5c4033;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-row .form-group {
+  flex: 1;
 }
 
 .date-group {
@@ -321,6 +485,19 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   margin-top: 25px;
-  gap: 15px; /* Increased gap between buttons */
+  gap: 15px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .form-row,
+  .date-group {
+    flex-direction: column;
+  }
+  
+  .modal {
+    max-width: 95%;
+    padding: 20px;
+  }
 }
 </style>

@@ -21,7 +21,6 @@ async function getRequests() {
     }
 }
 
-
 onMounted(() => {
     getRequests();
 })
@@ -73,26 +72,28 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
         </div>
 
         <div v-else>
-            <table class="requests-table">
-                <thead>
-                    <tr>
-                        <th>Event</th>
-                        <th>Event Location</th>
-                        <th>Category</th>
-                        <th>Item</th>
-                        <th>Qty Remaining</th>
-                        <th>Status</th>
-                        <th>Preferred Match</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(request, index) in requests" :key="index">
-                        <td>{{ request.event_name }}</td>
-                        <td>{{ request.location }}</td>
-                        <td>{{ request.category_name }}</td>
-                        <td>{{ request.item_name || 'Any item in category' }}</td>
-                        <td>{{ request.request_quantity_remaining }}</td>
-                        <td>
+            <div class="requests-grid">
+                <div v-for="(request, index) in requests" :key="index" class="request-card">
+                    <div class="request-header">
+                        <h3 class="request-title">{{ request.event_name }} - {{ request.category_name }}</h3>
+                        <div class="request-location">
+                            {{ request.location || 'Location not specified' }}
+                        </div>
+                    </div>
+                    
+                    <div class="request-details">
+                        <div class="detail-row">
+                            <strong>Specific Item:</strong> 
+                            <span>{{ request.item_name || 'Any item in category' }}</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <strong>Qty Remaining:</strong> 
+                            <span class="quantity-badge">{{ request.request_quantity_remaining }}</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <strong>Status:</strong> 
                             <span 
                                 :class="[
                                 'status-label',
@@ -101,8 +102,10 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
                             >
                                 {{ request.request_status?.toLowerCase() || 'pending' }}
                             </span>
-                        </td>
-                        <td>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <strong>Preferred Match:</strong>
                             <span 
                                 :class="[
                                 'match-type-badge',
@@ -112,10 +115,15 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
                             >
                                 {{ request.preferred_match_type_name || 'Not specified' }}
                             </span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        </div>
+                        
+                        <div v-if="request.request_details && request.request_details.trim() !== ''" class="detail-row">
+                            <strong>Details:</strong> 
+                            <span>{{ request.request_details }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
       </div>
@@ -178,64 +186,110 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
     color: #5c4033;
 }
 
-/* Table styling */
-.requests-table {
-    width: 100%;
+/* Grid layout for request cards */
+.requests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
     margin-top: 30px;
-    border-collapse: collapse;
-    border: 5px solid #c9b28e;
 }
 
-.requests-table th,
-.requests-table td {
-    padding: 12px 16px;
+/* Request card styling */
+.request-card {
+    background: #f9f3e8;
+    border: 2px solid #c9b28e;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: left;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.request-header {
+    margin-bottom: 20px;
     border-bottom: 1px solid #d3c0a3;
-    font-size: 16px;
+    padding-bottom: 15px;
 }
 
-.requests-table th {
-    background-color: #f5e1c5;
-    color: #5c4033;
-    text-align: center;
+.request-title {
+    font-size: 20px;
     font-weight: 600;
+    color: #5c4033;
+    margin-bottom: 10px;
 }
 
-.requests-table td {
-    background-color: #f9f3e8;
+.request-location {
+    background-color: #e8f5e8;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #2e8b57;
+    font-size: 14px;
+    color: #2e8b57;
+}
+
+.request-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detail-row strong {
     color: #5c4033;
-    text-align: center;
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.quantity-badge {
+    background: linear-gradient(135deg, #2e8b57, #227548);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .status-label {
-    display: inline-block;
     padding: 6px 12px;
     border-radius: 12px;
     font-weight: 600;
     font-size: 14px;
-    color: white;
     text-transform: capitalize;
     min-width: 80px;
     text-align: center;
 }
 
 .status-pending {
-    color: #b8860b;
-    font-weight: bold;
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
 }
 
 .status-shipped {
-    color: #0066cc;
-    font-weight: bold;
+    background-color: #cce5ff;
+    color: #004085;
+    border: 1px solid #99d3ff;
 }
 
 .status-delivered {
-    color: #2e8b57;
-    font-weight: bold;
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #8fcea5;
 }
 
 /* Match type badge styling */
 .match-type-badge {
-    display: inline-block;
     padding: 6px 12px;
     border-radius: 12px;
     font-weight: 600;
@@ -279,29 +333,33 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
         padding: 12px 30px;
     }
     
-    .requests-table {
-        font-size: 14px;
+    .requests-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
     
-    .requests-table th,
-    .requests-table td {
-        padding: 8px 4px;
+    .request-card {
+        padding: 20px;
     }
     
-    .match-type-badge,
-    .status-label {
-        font-size: 12px;
-        padding: 4px 8px;
-        min-width: 60px;
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .detail-row strong {
+        min-width: auto;
     }
 }
 
-/* Table overflow for mobile */
-@media (max-width: 600px) {
-    .requests-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
+/* Single column on very small screens */
+@media (max-width: 480px) {
+    .requests-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .request-title {
+        font-size: 18px;
     }
 }
 </style>

@@ -7,12 +7,26 @@
       <form @submit.prevent="submitRequest">
         <div class="form-group">
           <label>Select Disaster Event:</label>
-          <select v-model="selectedEvent" required>
+          <select v-model="selectedEvent" required @change="onEventChange">
             <option value="" disabled>-- Select an event --</option>
             <option v-for="event in events" :key="event.event_id" :value="event.event_id">
               {{ event.event_name }}
             </option>
           </select>
+          
+          <!-- Display event location when an event is selected -->
+          <div v-if="selectedEventDetails" class="event-location-display">
+            <div class="location-header">
+              <strong>Event Location:</strong>
+            </div>
+            <div class="location-details">
+              {{ selectedEventDetails.location || 'Location not specified' }}
+            </div>
+            <div class="event-dates">
+              <strong>Duration:</strong> 
+              {{ formatDate(selectedEventDetails.start_date) }} - {{ formatDate(selectedEventDetails.end_date) }}
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -67,7 +81,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
@@ -87,13 +101,44 @@ export default {
     const selectedItem = ref(null);
     const quantity = ref(1);
     const details = ref('');
-    const preferredMatchType = ref(''); // New field
+    const preferredMatchType = ref('');
 
     // Available options
     const events = ref([]);
     const categories = ref([]);
     const items = ref([]);
-    const matchTypes = ref([]); // New field
+    const matchTypes = ref([]);
+
+    // Get details of the selected event
+    const selectedEventDetails = computed(() => {
+      if (!selectedEvent.value) return null;
+      return events.value.find(event => event.event_id == selectedEvent.value);
+    });
+
+    // Format date for display
+    const formatDate = (dateString) => {
+      if (!dateString) return 'Not specified';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    };
+
+    // Handle event selection change
+    const onEventChange = () => {
+      // Clear categories and items when event changes
+      categories.value = [];
+      selectedCategory.value = '';
+      items.value = [];
+      selectedItem.value = null;
+      
+      // Fetch categories for the selected event
+      if (selectedEvent.value) {
+        fetchCategories();
+      }
+    };
 
     // Load available events and match types on mount
     onMounted(async () => {
@@ -134,20 +179,6 @@ export default {
       }
     };
 
-    // Watch for event selection change
-    watch(selectedEvent, (newValue) => {
-      if (newValue) {
-        fetchCategories();
-        categories.value = [];
-        selectedCategory.value = '';
-        items.value = [];
-        selectedItem.value = null;
-      } else {
-        categories.value = [];
-        items.value = [];
-      }
-    });
-
     // Watch for category selection change
     watch(selectedCategory, (newValue) => {
       if (newValue) {
@@ -175,7 +206,7 @@ export default {
         quantity: quantity.value,
         details: details.value,
         status: 'pending',
-        preferred_match_type_id: preferredMatchType.value // New field
+        preferred_match_type_id: preferredMatchType.value
       };
 
       try {
@@ -209,11 +240,14 @@ export default {
       selectedItem,
       quantity,
       details,
-      preferredMatchType, // New field
+      preferredMatchType,
       events,
       categories,
       items,
-      matchTypes, // New field
+      matchTypes,
+      selectedEventDetails,
+      formatDate,
+      onEventChange,
       submitRequest
     };
   }
@@ -239,7 +273,7 @@ export default {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
   width: 700px;
-  margin: 0 auto; /* This centers the box horizontally */
+  margin: 0 auto;
 }
 
 /* Create Request Header Styling */
@@ -259,6 +293,39 @@ export default {
   color: #6c757d;
   margin-bottom: 30px;
   text-align: left;
+}
+
+/* Event location display styling */
+.event-location-display {
+  margin-top: 15px;
+  padding: 20px;
+  background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+  border-radius: 12px;
+  border: 2px solid #2e8b57;
+  text-align: left;
+}
+
+.location-header {
+  font-size: 16px;
+  color: #2e8b57;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.location-details {
+  font-size: 18px;
+  color: #1a5c3a;
+  font-weight: 500;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.event-dates {
+  font-size: 14px;
+  color: #2e8b57;
+  font-style: italic;
+  padding-top: 8px;
+  border-top: 1px solid #c8e6c9;
 }
 
 /* Form styling */
@@ -303,5 +370,26 @@ input, select, textarea {
 .auth-actions {
   margin-top: 30px;
   margin-bottom: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .content-box {
+    width: 95%;
+    padding: 20px;
+  }
+  
+  .create-request-header {
+    font-size: 24px;
+    padding: 12px 30px;
+  }
+  
+  .event-location-display {
+    padding: 15px;
+  }
+  
+  .location-details {
+    font-size: 16px;
+  }
 }
 </style>

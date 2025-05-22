@@ -1,4 +1,3 @@
-# disaster_relief_app/models.py
 from disaster_relief_app.extensions import db
 
 # ----------------------------------------
@@ -15,14 +14,12 @@ class User(db.Model):
     zip_code = db.Column(db.String(20))
     is_approved = db.Column(db.Boolean, default=False)
 
-    #created_items = db.relationship('Item', back_populates='creator')
-
 # ----------------------------------------
 # Category Table
 # ----------------------------------------
 class Category(db.Model):
     __bind_key__ = 'dr_events'
-    __tablename__ = 'category'  # ✅ fixed
+    __tablename__ = 'category'
 
     category_id = db.Column(db.Integer, primary_key=True)
     category_name = db.Column(db.String(255), nullable=False)
@@ -34,7 +31,6 @@ class Category(db.Model):
 # ----------------------------------------
 # Item Table
 # ----------------------------------------
-# Update to the Item model in models.py
 class Item(db.Model):
     __bind_key__ = 'dr_events'
     __tablename__ = 'item'
@@ -42,7 +38,7 @@ class Item(db.Model):
     item_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    quantity = db.Column(db.Integer, default=1)  # Ensure this matches the database
+    quantity = db.Column(db.Integer, default=1)
     category_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
     created_by = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
@@ -50,7 +46,7 @@ class Item(db.Model):
     category = db.relationship('Category', back_populates='items')
 
 # ----------------------------------------
-# Event Table
+# Event Table (Updated with Location Fields)
 # ----------------------------------------
 class Event(db.Model):
     __bind_key__ = 'dr_events'
@@ -58,7 +54,11 @@ class Event(db.Model):
 
     event_id = db.Column(db.Integer, primary_key=True)
     event_name = db.Column(db.String(255), nullable=False)
-    location = db.Column(db.String(255))
+    location = db.Column(db.String(255))  # Combined location string
+    address = db.Column(db.String(255))   # Street address
+    city = db.Column(db.String(100))      # City
+    state = db.Column(db.String(50))      # State
+    zip_code = db.Column(db.String(20))   # ZIP code
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     description = db.Column(db.Text)
@@ -67,7 +67,6 @@ class Event(db.Model):
 
     categories = db.relationship('EventCategory', back_populates='event')
 
-
 # ----------------------------------------
 # Event <-> Category Join Table
 # ----------------------------------------
@@ -75,7 +74,7 @@ class EventCategory(db.Model):
     __bind_key__ = 'dr_events'
     __tablename__ = 'event_category'
 
-    event_id = db.Column(db.Integer, db.ForeignKey('disaster_event.event_id'), primary_key=True)  # ✅ fixed
+    event_id = db.Column(db.Integer, db.ForeignKey('disaster_event.event_id'), primary_key=True)
     category_id = db.Column(db.Integer, db.ForeignKey('category.category_id'), primary_key=True)
 
     event = db.relationship('Event', back_populates='categories')
