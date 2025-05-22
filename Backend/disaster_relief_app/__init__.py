@@ -28,7 +28,12 @@ def create_app():
 
 
     CORS(app, 
-    resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}}, 
+    resources={r"/*": {"origins": [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000",
+        "https://dams-disaster-aid-management-system-production.up.railway.app",
+        "https://*.vercel.app" 
+    ]}}, 
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
