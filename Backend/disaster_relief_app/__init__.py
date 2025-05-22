@@ -31,8 +31,8 @@ def create_app():
     resources={r"/*": {"origins": [
         "http://localhost:3000", 
         "http://127.0.0.1:3000",
-        "https://dams-disaster-aid-management-system-production.up.railway.app",
-        "https://*.vercel.app" 
+        "https://dams-disaster-aid-management-system.onrender.com",
+        "https://dams-disaster-aid-management-system.netlify.app"
     ]}}, 
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
