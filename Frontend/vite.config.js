@@ -44,8 +44,8 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            'vendor': ['vue', 'vue-router', 'pinia'],
-            'ui': ['@/components/common']
+            'vendor': ['vue', 'vue-router', 'pinia']
+            // Removed the problematic 'ui': ['@/components/common'] line
           }
         }
       }
