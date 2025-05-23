@@ -390,31 +390,38 @@ def get_requests():
 
     user_id = request.args.get('user_id')
     request_id = request.args.get('request_id')
+    
     try:
         if not user_id:
-            return jsonify({"error": "Missing requird fields"}), 400
+            return jsonify({"error": "Missing required fields"}), 400
        
-        get_requests_sp = "CALL dr_events.get_requests(:param_user_id, :request_id)"
-        result = db.session.execute((text(get_requests_sp)), ({"param_user_id": user_id, "request_id": request_id}))
+        # First check if user exists
+        user_check_query = text("SELECT user_id, role FROM dr_admin.user WHERE user_id = :user_id")
+        user_exists = db.session.execute(user_check_query, {"user_id": user_id}).fetchone()
+        
+        if not user_exists:
+            return jsonify({"error": "User not found"}), 404
+       
+        get_requests_sp = text("CALL dr_events.get_requests(:param_user_id, :request_id)")
+        result = db.session.execute(get_requests_sp, {"param_user_id": user_id, "request_id": request_id})
+        
         try:
             rows = result.fetchall()
-
             if rows:            
                 columns = result.keys()
-
                 matches = [dict(zip(columns, row)) for row in rows]
-            
                 return jsonify(matches), 200    
-            return []    
+            return jsonify([]), 200    
         except Exception as ex:   
-            return []
+            print(f"Error processing results: {ex}")
+            return jsonify([]), 200
         
     except SQLAlchemyError as ex:
         db.session.rollback()
-        # Handle database errors
+        print(f"Database error in get_requests: {ex}")
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:        
-        # Handle other errors
+    except Exception as ex:  
+        print(f"General error in get_requests: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 
