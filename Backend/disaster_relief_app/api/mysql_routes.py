@@ -1136,5 +1136,108 @@ def get_match_types():
     except Exception as ex:
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
+# Replace the getPledges route in mysql_routes.py
+@api_routes.route('/getPledges', methods=["GET"])
+def get_pledges():
+    db = get_db()
 
+    user_id = request.args.get('user_id')
+    try:
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+       
+        # Convert user_id to int
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid user_id"}), 400
+       
+        print(f"Getting pledges for user_id: {user_id}")
+        
+        # FIXED: Use direct query instead of stored procedure to debug
+        # First check if user exists
+        user_check_query = text("SELECT role FROM dr_admin.user WHERE user_id = :user_id")
+        user_result = db.session.execute(user_check_query, {"user_id": user_id}).fetchone()
+        
+        if not user_result:
+            return jsonify({"error": "User not found"}), 404
+            
+        user_role = user_result.role
+        print(f"User role: {user_role}")
+        
+        # Build query based on user role
+        if user_role == 'Donor':
+            pledges_query = text("""
+                SELECT 
+                    pledge.pledge_id,
+                    pledge.user_id AS donor_id,
+                    pledge.item_id,
+                    item.name AS item_name,
+                    pledge.item_quantity,
+                    pledge.pledge_status,
+                    pledge.fulfilled_quantity,
+                    pledge.allocated_quantity,
+                    pledge.item_quantity - (pledge.allocated_quantity + pledge.fulfilled_quantity) AS items_left,
+                    pledge.fulfilled_quantity AS items_locked,
+                    pledge.allocated_quantity AS items_allocated,
+                    pledge.canceled_flag,
+                    pledge.fulfilled_flag,
+                    pledge.created_at,
+                    category.category_id,
+                    category.category_name,
+                    user.zip_code
+                FROM dr_events.pledge
+                JOIN dr_events.item ON pledge.item_id = item.item_id
+                JOIN dr_events.category ON item.category_id = category.category_id
+                JOIN dr_admin.user ON pledge.user_id = user.user_id
+                WHERE pledge.user_id = :user_id AND pledge.canceled_flag = 0
+            """)
+        elif user_role == 'Admin':
+            pledges_query = text("""
+                SELECT 
+                    pledge.pledge_id,
+                    pledge.user_id AS donor_id,
+                    pledge.item_id,
+                    item.name AS item_name,
+                    pledge.item_quantity,
+                    pledge.pledge_status,
+                    pledge.fulfilled_quantity,
+                    pledge.allocated_quantity,
+                    pledge.item_quantity - (pledge.allocated_quantity + pledge.fulfilled_quantity) AS items_left,
+                    pledge.fulfilled_quantity AS items_locked,
+                    pledge.allocated_quantity AS items_allocated,
+                    pledge.canceled_flag,
+                    pledge.fulfilled_flag,
+                    pledge.created_at,
+                    category.category_id,
+                    category.category_name,
+                    user.zip_code
+                FROM dr_events.pledge
+                JOIN dr_events.item ON pledge.item_id = item.item_id
+                JOIN dr_events.category ON item.category_id = category.category_id
+                JOIN dr_admin.user ON pledge.user_id = user.user_id
+                WHERE pledge.canceled_flag = 0
+            """)
+        else:
+            return jsonify({"error": "User role not authorized to view pledges"}), 403
+        
+        result = db.session.execute(pledges_query, {"user_id": user_id})
+        rows = result.fetchall()
+
+        if rows:            
+            columns = result.keys()
+            pledges = [dict(zip(columns, row)) for row in rows]
+            print(f"Found {len(pledges)} pledges")
+            return jsonify(pledges), 200
+        else:
+            print("No pledges found")
+            return jsonify([]), 200
+        
+    except SQLAlchemyError as ex:
+        db.session.rollback()
+        print(f"Database error in get_pledges: {ex}")
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        print(f"General error in get_pledges: {ex}")
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
