@@ -18,13 +18,11 @@
           <p v-if="selectedRequest.requester_zipcode"><strong>Recipient Location:</strong> {{ selectedRequest.requester_zipcode }}</p>
           <p v-if="selectedRequest.request_details"><strong>Details:</strong> {{ selectedRequest.request_details }}</p>
           
-          <!-- Show recipient's preferred matching method -->
           <p v-if="selectedRequest.preferred_match_type_name">
             <strong>Recipient's Preferred Method:</strong> {{ capitalizeFirstLetter(selectedRequest.preferred_match_type_name) }}
           </p>
         </div>
 
-        <!-- Show inventory breakdown -->
         <div class="inventory-breakdown">
           <h4>Available Inventory</h4>
           <div class="inventory-stats">
@@ -56,7 +54,6 @@
           <h3>Select Auto-Match Method</h3>
           <p class="helper-text">Choose how you want the system to match this request with available inventory sources.</p>
           
-          <!-- Inventory priority selection -->
           <div class="priority-selection">
             <h4>Inventory Priority</h4>
             <p class="help-text">Select which inventory source should be prioritized when matching.</p>
@@ -107,6 +104,7 @@
                   'match-btn',
                   { 'match-btn-preferred': isPreferredMethod(matchType) }
                 ]"
+                :disabled="isAdminObserver"
                 @click="createAutoMatch(selectedRequest, matchType)"
               >
                 <span class="match-name">{{ capitalizeFirstLetter(matchType.name) }}</span>
@@ -134,6 +132,9 @@ import api from '@/services/api';
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+
+const isAdminObserver = computed(() => authStore.isAdminObserver);
+const canCreateMatches = computed(() => authStore.canCreateMatches);
 
 const matchTypes = ref([]);
 const selectedRequest = ref({});
@@ -209,6 +210,11 @@ async function getCombinedOptions(requestId) {
 
 // Create auto match
 async function createAutoMatch(selectedRequest, matchType) {
+  if (isAdminObserver.value) {
+    alert('Admin Observers cannot create matches.');
+    return;
+  }
+  
   try {
     const matchRequest = {
       request_id: selectedRequest.request_id,

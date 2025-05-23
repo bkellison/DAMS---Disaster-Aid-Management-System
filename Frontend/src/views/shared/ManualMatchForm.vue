@@ -1,4 +1,4 @@
-<template>
+<template> 
   <div class="match-container">
     <div class="content-box">
       <h1 class="match-header">Create Manual Match</h1>
@@ -22,7 +22,6 @@
         <div class="form-section">
           <h3>Match Options</h3>
           
-          <!-- If there are combined sources for this item -->
           <div v-if="matchOptions.available_sources.length > 0" class="inventory-summary">
             <h4>Inventory Summary</h4>
             <div class="inventory-stats">
@@ -41,12 +40,10 @@
             </div>
           </div>
           
-          <!-- No matching sources message -->
           <div v-if="matchOptions.available_sources.length === 0" class="no-pledges-message">
             No inventory or pledges match the requested item.
           </div>
           
-          <!-- Source selection tabs -->
           <div v-else class="source-tabs">
             <button 
               class="tab-button" 
@@ -66,7 +63,6 @@
             </button>
           </div>
           
-          <!-- Admin inventory tab content -->
           <div v-if="activeTab === 'admin' && matchOptions.base_quantity > 0" class="tab-content">
             <div class="admin-inventory">
               <h4>Match from Admin Inventory</h4>
@@ -86,13 +82,14 @@
               <button 
                 class="match-btn" 
                 @click="createAdminMatch(selectedRequest)"
+                :disabled="isAdminObserver"
+                title="Only Admins can perform this action"
               >
                 Match from Admin Inventory
               </button>
             </div>
           </div>
           
-          <!-- Pledges tab content -->
           <div v-if="activeTab === 'pledges' && matchOptions.available_pledges.length > 0" class="tab-content">
             <div class="pledge-selection">
               <h4>Select a Specific Donor Pledge</h4>
@@ -117,7 +114,6 @@
               </div>
             </div>
             
-            <!-- Match quantity section (only shown when a pledge is selected) -->
             <div v-if="selectedPledge" class="match-details">
               <h3>Match Details</h3>
               <p><strong>Selected Donor:</strong> {{ selectedPledge.donor_name || 'Donor #' + selectedPledge.donor_id }}</p>
@@ -137,13 +133,14 @@
               <button 
                 class="match-btn"
                 @click="createPledgeMatch(selectedRequest, selectedPledge)"
+                :disabled="isAdminObserver"
+                title="Only Admins can perform this action"
               >
                 Create Match from Pledge
               </button>
             </div>
           </div>
           
-          <!-- Auto match option -->
           <div class="auto-match-option">
             <h3>Or Use Auto Match</h3>
             <p>Let the system automatically match this request with the best available sources.</p>
@@ -161,6 +158,7 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -172,6 +170,9 @@ defineExpose({ AppButton });
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+
+const isAdminObserver = computed(() => authStore.isAdminObserver);
+const canCreateMatches = computed(() => authStore.canCreateMatches);
 
 // State variables
 const selectedRequest = ref({});
@@ -245,6 +246,11 @@ async function getMatchOptions(requestId) {
 
 // Create a match from admin inventory
 async function createAdminMatch(request) {
+  if (isAdminObserver.value) {
+    alert('Admin Observers cannot create matches from admin inventory.');
+    return;
+  }
+  
   if (!adminMatchQuantity.value || adminMatchQuantity.value < 1) {
     alert('Please enter a valid quantity');
     return;
@@ -268,6 +274,11 @@ async function createAdminMatch(request) {
 
 // Create a match from a donor pledge
 async function createPledgeMatch(request, pledge) {
+  if (isAdminObserver.value) {
+    alert('Admin Observers cannot create matches from donor pledges.');
+    return;
+  }
+  
   if (!pledgeMatchQuantity.value || pledgeMatchQuantity.value < 1) {
     alert('Please enter a valid quantity');
     return;

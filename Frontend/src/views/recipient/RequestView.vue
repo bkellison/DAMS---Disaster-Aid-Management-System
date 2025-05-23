@@ -7,7 +7,9 @@ import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const isAdmin = computed(() => authStore.role === 'Admin');
+const isAdmin = computed(() => authStore.isAdmin);
+const isAdminObserver = computed(() => authStore.isAdminObserver);
+const canCreateRequests = computed(() => authStore.canCreateRequests);
 
 const requests = ref([])
 
@@ -26,6 +28,10 @@ onMounted(() => {
 })
 
 const createNewRequest = () => {
+  if (isAdminObserver.value) {
+    alert('Admin Observers cannot create requests.');
+    return;
+  }
   router.push({ path: `/create-request` });
 }
 
@@ -57,7 +63,6 @@ const getMatchTypeBadgeClass = (matchTypeName) => {
 }
 
 </script>
-
 <template>
     <div class="requests-container">
       <div class="content-box">

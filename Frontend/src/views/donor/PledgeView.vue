@@ -7,8 +7,11 @@ import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const isAdmin = computed(() => authStore.role === 'Admin');
-const isDonor = computed(() => authStore.role === 'Donor');
+const isAdmin = computed(() => authStore.isAdmin);
+const isDonor = computed(() => authStore.isDonor);
+const isAdminObserver = computed(() => authStore.isAdminObserver);
+const canEdit = computed(() => authStore.canEdit);
+const canUpdatePledges = computed(() => authStore.canUpdatePledges);
 
 const pledges = ref([])
 
@@ -23,6 +26,11 @@ async function getPledges() {
 }
 
 async function cancelPledge(pledge_id) {
+    if (isAdminObserver.value) {
+        alert('Admin Observers cannot delete pledges.');
+        return;
+    }
+    
     try {
         await api.post(`/cancelPledge/${pledge_id}`)
         getPledges()
@@ -42,6 +50,11 @@ const goToPledgeForm = () => {
 
 const rowToEditId = ref(null)
 const allowEdit = (pledge) => {
+    if (isAdminObserver.value) {
+        alert('Admin Observers cannot update pledges.');
+        return;
+    }
+    
     if(rowToEditId.value == pledge.pledge_id) {
         if (pledge.item_quantity < pledge.items_locked) {
             alert('You cannot update pledge to equal less then locked items')
@@ -55,6 +68,11 @@ const allowEdit = (pledge) => {
 }
 
 async function updatePledge(pledge, qty) {
+    if (isAdminObserver.value) {
+        alert('Admin Observers cannot update pledges.');
+        return;
+    }
+    
     // Prepare the payload
     const updatePledgeObject = {
         pledge_id: pledge.pledge_id,
@@ -77,7 +95,7 @@ async function updatePledge(pledge, qty) {
       <div class="pledge-wrapper">
         <h1 class="pledge-header">Pledges View</h1>
         
-        <div v-if="!isAdmin" class="action-button-container">
+        <div v-if="!isAdmin && !isAdminObserver" class="action-button-container">
           <AppButton variant="add" @click="goToPledgeForm">+ Create New Pledge</AppButton>
         </div>
 
@@ -88,34 +106,38 @@ async function updatePledge(pledge, qty) {
                     <th>Item</th>
                     <th>Pledged Qty</th>
                     <th>Qty (Locked / Left)</th>
-                    <th v-if="isAdmin">Donor</th>
-                    <th v-if="isAdmin">Zipcode</th>
-                    <th v-if="isAdmin || isDonor">Actions</th>
+                    <th v-if="isAdmin || isAdminObserver">Donor</th>
+                    <th v-if="isAdmin || isAdminObserver">Zipcode</th>
+                    <th v-if="isAdmin || isDonor || isAdminObserver">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="(pledge, index) in pledges" :key="index">
                     <td>{{ pledge.category_name }}</td>
                     <td>{{ pledge.item_name }}</td>
-                    <td v-if="rowToEditId == pledge.pledge_id">
+                    <td v-if="rowToEditId == pledge.pledge_id && canUpdatePledges">
                        <input type="number" v-model="pledge.item_quantity" class="qty-input" />
                     </td>
                     <td v-else>
                         {{ pledge.item_quantity }}
                     </td>
                     <td>{{ pledge.items_locked }} / {{ pledge.items_left }}</td>
-                    <td v-if="isAdmin">{{ pledge.donor_id }}</td>
-                    <td v-if="isAdmin">{{ pledge.zip_code }}</td>
-                    <td v-if="isAdmin || isDonor" class="action-buttons">
+                    <td v-if="isAdmin || isAdminObserver">{{ pledge.donor_id }}</td>
+                    <td v-if="isAdmin || isAdminObserver">{{ pledge.zip_code }}</td>
+                    <td v-if="isAdmin || isDonor || isAdminObserver" class="action-buttons">
                         <AppButton 
                           variant="edit" 
                           @click="allowEdit(pledge)" 
+                          :disabled="isAdminObserver || !canUpdatePledges"
+                          :class="{ 'disabled-button': isAdminObserver }"
                           title="Update Pledged Qty">
                           {{ rowToEditId == pledge.pledge_id ? 'Save' : 'Update' }}
                         </AppButton>
                         <AppButton 
                           variant="danger" 
                           @click="cancelPledge(pledge.pledge_id)" 
+                          :disabled="isAdminObserver || !canUpdatePledges"
+                          :class="{ 'disabled-button': isAdminObserver }"
                           title="Cancel Remaining Pledged Items">
                           Delete
                         </AppButton>
@@ -201,5 +223,16 @@ async function updatePledge(pledge, qty) {
     padding: 6px;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+.disabled-button {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background-color: #ccc !important;
+}
+
+.disabled-button:hover {
+    transform: none !important;
+    box-shadow: none !important;
 }
 </style>

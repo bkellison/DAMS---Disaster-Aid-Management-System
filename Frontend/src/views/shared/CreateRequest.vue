@@ -73,7 +73,7 @@
         </div>
 
         <div class="auth-actions">
-          <AppButton type="submit" variant="primary">Submit Request</AppButton>
+          <AppButton type="submit" variant="primary":disabled="isAdminObserver">Submit Request</AppButton>
         </div>
       </form>
     </div>
@@ -248,7 +248,8 @@ export default {
       selectedEventDetails,
       formatDate,
       onEventChange,
-      submitRequest
+      submitRequest,
+      isAdminObserver 
     };
   }
 };

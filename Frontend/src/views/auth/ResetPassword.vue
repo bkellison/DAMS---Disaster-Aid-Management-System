@@ -56,14 +56,16 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth'; // ADD THIS IMPORT
 import AppInput from '@/components/common/AppInput.vue';
 import AppButton from '@/components/common/AppButton.vue';
 import AppAlert from '@/components/common/AppAlert.vue';
 import useAlert from '@/composables/useAlert';
 import useLoading from '@/composables/useLoading';
-
+import api from '@/services/api'; // ADD THIS IMPORT
 
 const router = useRouter();
+const authStore = useAuthStore(); // ADD THIS LINE
 const { alert, showAlert, closeAlert } = useAlert();
 const { isLoading, showLoading, hideLoading } = useLoading();
 
@@ -127,7 +129,9 @@ const resetPassword = async () => {
       new_password: newPassword.value
     };
   
-    const response = await authStore.resetPassword(resetData);
+    // Call the API directly instead of using authStore method
+    const response = await api.post('/resetForgottenPassword', resetData);
+    
     if (response.status === 200) {
       showAlert({
         type: 'success',

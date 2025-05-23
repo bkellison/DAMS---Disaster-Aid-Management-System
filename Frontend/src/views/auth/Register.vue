@@ -119,6 +119,7 @@ import AppAlert from '@/components/common/AppAlert.vue';
 import useFormValidation from '@/composables/useFormValidation';
 import useAlert from '@/composables/useAlert';
 import useLoading from '@/composables/useLoading';
+import api from '@/services/api'; // ADD THIS IMPORT
 
 // Initialize router
 const router = useRouter();
@@ -132,7 +133,8 @@ const { isLoading, showLoading, hideLoading } = useLoading();
 const roleOptions = [
   { value: 'Recipient', label: 'Recipient' },
   { value: 'Donor', label: 'Donor' },
-  { value: 'Admin', label: 'Admin' }
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Admin Observer', label: 'Admin Observer' }
 ];
 
 // State options for select
@@ -287,8 +289,8 @@ const handleSubmit = async () => {
       requestData.state = formValues.state;
     }
     
-    // Call register API
-    const response = await authStore.requestAccount(requestData);
+    // FIXED: Call API directly instead of using authStore method
+    const response = await api.post('/requestNewAccount', requestData);
     
     if (response.status === 201) {
       showAlert({
@@ -303,22 +305,26 @@ const handleSubmit = async () => {
         router.push('/');
       }, 3000);
     } else {
-      const errorData = await response.json();
       showAlert({
         type: 'error',
         title: 'Registration Failed',
-        message: errorData.error || 'An error occurred during registration. Please try again.',
+        message: response.data?.error || 'An error occurred during registration. Please try again.',
         duration: 5000
       });
     }
   } catch (error) {
     console.error('Registration failed:', error);
     
+    let errorMessage = 'Connection error. Please try again later.';
+    if (error.response) {
+      errorMessage = error.response.data?.error || 'An error occurred during registration. Please try again.';
+    }
+    
     // Show error message
     showAlert({
       type: 'error',
       title: 'Registration Failed',
-      message: 'Connection error. Please try again later.',
+      message: errorMessage,
       duration: 5000
     });
   } finally {

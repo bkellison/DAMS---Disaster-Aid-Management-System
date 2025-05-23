@@ -65,7 +65,7 @@
         </div>
 
         <div class="auth-actions">
-          <AppButton type="submit" variant="primary">Create Event</AppButton>
+          <AppButton type="submit" variant="primary":disabled="isAdminObserver">Create Event</AppButton>
         </div>
       </form>
     </div>
@@ -73,12 +73,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
 import api from '@/services/api';
 
 const router = useRouter();
+const authStore = useAuthStore();
+
+const isAdminObserver = computed(() => authStore.isAdminObserver);
+const canManageEvents = computed(() => authStore.canManageEvents);
 
 const event = ref({
   name: '',
@@ -154,6 +159,11 @@ const fetchCategories = async () => {
 }
 
 const submitEvent = async () => {
+  if (isAdminObserver.value) {
+    alert('Admin Observers cannot create events.');
+    return;
+  }
+  
   try {
     // Combine location fields into a single location string
     const locationString = `${event.value.address}, ${event.value.city}, ${event.value.state} ${event.value.zipCode}`;
@@ -170,14 +180,19 @@ const submitEvent = async () => {
       address: event.value.address,
       city: event.value.city,
       state: event.value.state,
-      zipCode: event.value.zipCode
+      zipCode: event.value.zipCode,
+      user_id: authStore.userId // Add user ID for permission checking
     }
 
     await api.post('/api/admin/events', formattedEvent)
     alert('Event created successfully!')
     router.push({ path: '/admin/view-events' })
   } catch (error) {
-    alert('Error creating event: ' + error.message)
+    if (error.response && error.response.status === 403) {
+      alert('You do not have permission to create events.');
+    } else {
+      alert('Error creating event: ' + error.message)
+    }
   }
 }
 

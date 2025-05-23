@@ -110,13 +110,11 @@ const handleSubmit = async () => {
   try {
     showLoading('Logging in...');
 
-    // Axios call
     const response = await api.post('/login', {
       username: formValues.username,
       password: formValues.password
     });
 
-    // ✅ Axios automatically parses JSON
     const data = response.data;
 
     // Handle "Remember me" preference
@@ -132,6 +130,8 @@ const handleSubmit = async () => {
     // Redirect based on user role
     if (authStore.isAdmin) {
       router.push('/admin');
+    } else if (authStore.role === 'Admin Observer') {
+      router.push('/admin'); // Admin Observers go to admin pages but with limited permissions
     } else if (authStore.isDonor) {
       router.push('/donor');
     } else if (authStore.isRecipient) {

@@ -11,7 +11,7 @@
       <!-- Links for authenticated users -->
       <template v-else>
         <!-- Admin links -->
-        <template v-if="authStore.isAdmin">
+        <template v-if="authStore.isAdmin || authStore.role === 'Admin Observer'">
           <RouterLink to="/admin" active-class="active-link">Admin Dashboard</RouterLink>
           
           <div class="app-nav__dropdown">

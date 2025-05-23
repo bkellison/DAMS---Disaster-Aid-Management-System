@@ -1,12 +1,40 @@
 # disaster_relief_app/api/event_routes.py
 from flask import Blueprint, request, jsonify
 from disaster_relief_app.models import db, Event, EventCategory
+from sqlalchemy import text
+from disaster_relief_app.utils import get_db
 
 event_routes = Blueprint('event_routes', __name__)
+
+def check_admin_permissions(user_id):
+    """Check if user has full admin permissions (not just observer)"""
+    try:
+        db_connection = get_db()
+        
+        user_query = text("SELECT role FROM dr_admin.user WHERE user_id = :user_id")
+        result = db_connection.session.execute(user_query, {"user_id": user_id}).fetchone()
+        
+        if not result:
+            return False
+            
+        return result.role == 'Admin'  # Only full Admin role can edit
+    except Exception as e:
+        print(f"Error checking admin permissions: {e}")
+        return False
+
+def get_user_from_session():
+    """Get user ID from session/request - you'll need to implement this based on your auth system"""
+    return request.json.get('user_id') if request.json else None
 
 @event_routes.route('/admin/events', methods=['POST'])
 def create_event():
     data = request.get_json()
+    
+    # Check permissions - only full Admins can create events
+    user_id = get_user_from_session()
+    if user_id and not check_admin_permissions(user_id):
+        return jsonify({'error': 'Insufficient permissions. Only Admins can create events.'}), 403
+    
     try:
         new_event = Event(
             event_name=data['name'],
@@ -37,9 +65,11 @@ def create_event():
                 continue
             link = EventCategory(event_id=new_event.event_id, category_id=cat_id)
             db.session.add(link)
+        
         db.session.commit()
         return jsonify({'message': 'Event created', 'id': new_event.event_id}), 201
     except Exception as e:
+        db.session.rollback()
         print("Event creation failed:", e)
         return jsonify({'error': 'Failed to create event'}), 500
 
@@ -64,6 +94,7 @@ def get_events():
             event_list.append({
                 'event_id': e.event_id,
                 'name': e.event_name,
+                'type': e.type,
                 'location': e.location,
                 'address': getattr(e, 'address', ''),
                 'city': getattr(e, 'city', ''),
@@ -80,7 +111,6 @@ def get_events():
     except Exception as e:
         print("Error fetching events:", e)
         return jsonify({'error': 'Failed to fetch events'}), 500
-
 
 @event_routes.route('/categories', methods=['GET'])
 def get_categories():
@@ -100,6 +130,11 @@ def get_categories():
     
 @event_routes.route('/admin/events/<int:event_id>', methods=['DELETE'])
 def delete_event(event_id):
+    # Check permissions - only full Admins can delete events
+    user_id = get_user_from_session()
+    if user_id and not check_admin_permissions(user_id):
+        return jsonify({'error': 'Insufficient permissions. Only Admins can delete events.'}), 403
+    
     try:
         # First, delete all related event_category entries
         EventCategory.query.filter_by(event_id=event_id).delete()
@@ -121,6 +156,11 @@ def delete_event(event_id):
 def update_event(event_id):
     from disaster_relief_app.models import EventCategory
 
+    # Check permissions - only full Admins can update events
+    user_id = get_user_from_session()
+    if user_id and not check_admin_permissions(user_id):
+        return jsonify({'error': 'Insufficient permissions. Only Admins can update events.'}), 403
+
     data = request.get_json()
     event = Event.query.get(event_id)
     if not event:
@@ -129,9 +169,11 @@ def update_event(event_id):
     try:
         # Update basic event information
         event.event_name = data['name']
+        event.type = data.get('type', event.type)
         event.location = data.get('location', '')
         event.start_date = data['start_date']
         event.end_date = data['end_date']
+        event.description = data.get('description', event.description)
 
         # Update individual location fields if provided
         if 'address' in data:
@@ -178,3 +220,28 @@ def get_event_categories(event_id):
     except Exception as e:
         print(f"Error fetching categories for event {event_id}:", e)
         return jsonify({'error': 'Failed to fetch event categories'}), 500
+
+# Additional utility route to check user permissions (optional)
+@event_routes.route('/admin/check-permissions', methods=['GET'])
+def check_permissions():
+    """Check if current user has admin permissions"""
+    user_id = get_user_from_session()
+    if not user_id:
+        return jsonify({'error': 'No user session found'}), 401
+    
+    has_admin_permissions = check_admin_permissions(user_id)
+    
+    try:
+        db_connection = get_db()
+        user_query = text("SELECT role FROM dr_admin.user WHERE user_id = :user_id")
+        result = db_connection.session.execute(user_query, {"user_id": user_id}).fetchone()
+        
+        return jsonify({
+            'user_id': user_id,
+            'role': result.role if result else None,
+            'can_edit': has_admin_permissions,
+            'can_view': result.role in ['Admin', 'Admin Observer'] if result else False
+        }), 200
+    except Exception as e:
+        print(f"Error checking permissions: {e}")
+        return jsonify({'error': 'Failed to check permissions'}), 500

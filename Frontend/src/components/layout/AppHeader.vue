@@ -79,6 +79,11 @@ const handleLogout = () => {
   color: #721c24;
 }
 
+.role-badge--admin-observer {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
 .role-badge--donor {
   background-color: #d4edda;
   color: #155724;

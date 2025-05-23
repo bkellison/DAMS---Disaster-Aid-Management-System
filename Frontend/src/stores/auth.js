@@ -11,7 +11,7 @@ export const useAuthStore = defineStore("auth", {
     isAuthenticated: false
   }),
 
-  getters: {
+    getters: {
     isAdmin: (state) => {
       console.log('Checking isAdmin:', state.role === 'Admin', 'Current role:', state.role);
       return state.role === 'Admin';
@@ -23,6 +23,32 @@ export const useAuthStore = defineStore("auth", {
     isRecipient: (state) => {
       console.log('Checking isRecipient:', state.role === 'Recipient', 'Current role:', state.role);
       return state.role === 'Recipient';
+    },
+    isAdminObserver: (state) => {
+      console.log('Checking isAdminObserver:', state.role === 'Admin Observer', 'Current role:', state.role);
+      return state.role === 'Admin Observer';
+    },
+    // Permission-based getters
+    canEdit: (state) => {
+      return state.role === 'Admin'; // Only full admins can edit
+    },
+    canView: (state) => {
+      return ['Admin', 'Admin Observer'].includes(state.role); // Both can view admin pages
+    },
+    canCreateRequests: (state) => {
+      return state.role !== 'Admin Observer'; // Admin Observer cannot create requests
+    },
+    canManageEvents: (state) => {
+      return state.role === 'Admin'; // Only full admins can manage events
+    },
+    canManageItems: (state) => {
+      return state.role === 'Admin'; // Only full admins can manage donation items
+    },
+    canCreateMatches: (state) => {
+      return state.role === 'Admin'; // Only full admins can create matches
+    },
+    canUpdatePledges: (state) => {
+      return ['Admin', 'Donor'].includes(state.role) && state.role !== 'Admin Observer';
     }
   },
 

@@ -391,26 +391,32 @@ def get_requests():
     user_id = request.args.get('user_id')
     request_id = request.args.get('request_id')
     
+    # Convert 'undefined' string to None
+    if request_id == 'undefined' or request_id == '':
+        request_id = None
+    elif request_id is not None:
+        try:
+            request_id = int(request_id)
+        except (ValueError, TypeError):
+            request_id = None
+    
     try:
         if not user_id:
             return jsonify({"error": "Missing required fields"}), 400
        
-        # First check if user exists
-        user_check_query = text("SELECT user_id, role FROM dr_admin.user WHERE user_id = :user_id")
-        user_exists = db.session.execute(user_check_query, {"user_id": user_id}).fetchone()
-        
-        if not user_exists:
-            return jsonify({"error": "User not found"}), 404
-       
-        get_requests_sp = text("CALL dr_events.get_requests(:param_user_id, :request_id)")
-        result = db.session.execute(get_requests_sp, {"param_user_id": user_id, "request_id": request_id})
+        get_requests_sp = "CALL dr_events.get_requests(:param_user_id, :request_id)"
+        result = db.session.execute(text(get_requests_sp), {
+            "param_user_id": int(user_id), 
+            "request_id": request_id
+        })
         
         try:
             rows = result.fetchall()
+
             if rows:            
                 columns = result.keys()
-                matches = [dict(zip(columns, row)) for row in rows]
-                return jsonify(matches), 200    
+                requests = [dict(zip(columns, row)) for row in rows]
+                return jsonify(requests), 200    
             return jsonify([]), 200    
         except Exception as ex:   
             print(f"Error processing results: {ex}")
@@ -420,11 +426,10 @@ def get_requests():
         db.session.rollback()
         print(f"Database error in get_requests: {ex}")
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:  
+    except Exception as ex:
         print(f"General error in get_requests: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
-
 @api_routes.route('/createPledge', methods=["POST"])
 def create_pledge():
     db = get_db()
@@ -514,30 +519,35 @@ def get_pledges():
     user_id = request.args.get('user_id')
     try:
         if not user_id:
-            return jsonify({"error": "user_id"}), 400
+            return jsonify({"error": "user_id is required"}), 400
+       
+        # Convert user_id to int
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid user_id"}), 400
        
         get_pledges_sp = "CALL dr_events.get_pledges(:param_user_id)"
-        result = db.session.execute((text(get_pledges_sp)), ({"param_user_id": user_id}))
+        result = db.session.execute(text(get_pledges_sp), {"param_user_id": user_id})
 
         try:
             rows = result.fetchall()
 
             if rows:            
                 columns = result.keys()
-
                 pledges = [dict(zip(columns, row)) for row in rows]
-            
                 return jsonify(pledges), 200   
-            return []     
+            return jsonify([]), 200     
         except Exception as ex:   
-            return []
+            print(f"Error processing pledge results: {ex}")
+            return jsonify([]), 200
         
     except SQLAlchemyError as ex:
         db.session.rollback()
-        # Handle database errors
+        print(f"Database error in get_pledges: {ex}")
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:        
-        # Handle other errors
+    except Exception as ex:
+        print(f"General error in get_pledges: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 
