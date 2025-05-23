@@ -1,5 +1,4 @@
-# disaster_relief_app/__init__.py
-from flask import Flask, request
+from flask import Flask, request  
 from flask_cors import CORS
 from config import Config
 from disaster_relief_app.api.mysql_routes import api_routes
@@ -16,7 +15,7 @@ import os
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    
+
     try:
         db.init_app(app)
         with app.app_context():
@@ -25,33 +24,25 @@ def create_app():
     except Exception as e:
         print("❌ DB connection failed:", e)
 
-    # Enhanced CORS configuration
-    CORS(app, 
-         origins=[
-             "http://localhost:3000",
-             "https://dams-disaster-aid-management-system.netlify.app",
-             "https://dams-disaster-aid-management-system.onrender.com"  # Add your backend domain
-         ], 
-         supports_credentials=True,
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Credentials'],
-         expose_headers=['Set-Cookie']
-    )
-    
-    # Add CORS headers manually as backup
+    # Only enable credentials, let after_request handle origins
+    CORS(app, supports_credentials=True)
+
+    # Dynamically set the CORS headers
     @app.after_request
     def after_request(response):
-        origin = request.headers.get('Origin')
-        if origin in [
+        allowed_origins = [
             "http://localhost:3000",
             "https://dams-disaster-aid-management-system.netlify.app"
-        ]:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        ]
+        origin = request.headers.get('Origin')
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+            response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response
-    
+
+    # Register blueprints
     app.register_blueprint(api_routes)
     app.register_blueprint(communication_routes)
     app.register_blueprint(event_routes, url_prefix='/api')
@@ -60,5 +51,5 @@ def create_app():
     app.register_blueprint(shipping_routes, url_prefix='/api')
 
     app.config['TESTING'] = True
-    
+
     return app
