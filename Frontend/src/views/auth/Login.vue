@@ -106,63 +106,59 @@ const {
 // Handle form submission
 const handleSubmit = async () => {
   if (!validate()) return;
-  
+
   try {
     showLoading('Logging in...');
-    
-    // Call login API
+
+    // Axios call
     const response = await api.post('/login', {
       username: formValues.username,
       password: formValues.password
     });
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Handle "Remember me" preference
-      if (formValues.rememberMe) {
-        localStorage.setItem('rememberedUsername', formValues.username);
-      } else {
-        localStorage.removeItem('rememberedUsername');
-      }
-      
-      // Set user data in auth store
-      authStore.setUserData(data);
-      
-      // Redirect based on user role
-      if (authStore.isAdmin) {
-        router.push('/admin');
-      } else if (authStore.isDonor) {
-        router.push('/donor');
-      } else if (authStore.isRecipient) {
-        router.push('/recipient');
-      } else {
-        router.push('/');
-      }
+
+    // ✅ Axios automatically parses JSON
+    const data = response.data;
+
+    // Handle "Remember me" preference
+    if (formValues.rememberMe) {
+      localStorage.setItem('rememberedUsername', formValues.username);
     } else {
-      // Handle error
-      const errorData = await response.json();
-      showAlert({
-        type: 'error',
-        title: 'Login Failed',
-        message: errorData.error || 'Invalid credentials. Please try again.',
-        duration: 5000
-      });
+      localStorage.removeItem('rememberedUsername');
+    }
+
+    // Set user data in auth store
+    authStore.setUserData(data);
+
+    // Redirect based on user role
+    if (authStore.isAdmin) {
+      router.push('/admin');
+    } else if (authStore.isDonor) {
+      router.push('/donor');
+    } else if (authStore.isRecipient) {
+      router.push('/recipient');
+    } else {
+      router.push('/');
     }
   } catch (error) {
     console.error('Login failed:', error);
-    
-    // Show error message
+
+    let errorMessage = 'Connection error. Please try again later.';
+    if (error.response) {
+      // Server responded with an error
+      errorMessage = error.response.data?.error || 'Invalid credentials. Please try again.';
+    }
+
     showAlert({
       type: 'error',
       title: 'Login Failed',
-      message: 'Connection error. Please try again later.',
+      message: errorMessage,
       duration: 5000
     });
   } finally {
     hideLoading();
   }
 };
+
 
 // Redirect if already logged in
 onMounted(() => {
