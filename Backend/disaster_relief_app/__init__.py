@@ -1,5 +1,3 @@
-
-
 from flask import Flask
 from flask_cors import CORS
 from config import Config
@@ -16,8 +14,7 @@ from disaster_relief_app.extensions import db
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    #csrf = CSRFProtect()
-    # csrf.init_app(app) # Compliant 
+    
     try:
         db.init_app(app)
         with app.app_context():
@@ -26,18 +23,14 @@ def create_app():
     except Exception as e:
         print("❌ DB connection failed:", e)
 
-
+    # More permissive CORS to fix the issue
     CORS(app, 
-    resources={r"/*": {"origins": [
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "https://dams-disaster-aid-management-system.onrender.com",
-        "https://dams-disaster-aid-management-system.netlify.app"
-    ]}}, 
-    supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-)
+        origins=["*"],
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
+    
     app.register_blueprint(api_routes)
     app.register_blueprint(communication_routes)
     app.register_blueprint(event_routes, url_prefix='/api')
@@ -45,10 +38,6 @@ def create_app():
     app.register_blueprint(donation_routes, url_prefix='/api')
     app.register_blueprint(shipping_routes, url_prefix='/api')
 
-
-    app.config['TESTING'] = True  # Enable testing mode
-
- 
+    app.config['TESTING'] = True
 
     return app
-
