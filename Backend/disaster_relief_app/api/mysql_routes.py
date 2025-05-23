@@ -73,13 +73,13 @@ def login():
 
         print(f"Processing login for username: {username}")
 
-        #Verify valid inputs
+        # Verify valid inputs
         if not username or not password:
             print("Missing required fields")
             return jsonify({"error": "Missing required fields"}), 400
         
-        #Check if user exists
-        existing_user_query = text("SELECT * FROM user WHERE is_approved = 1 AND username = :username")
+        # FIXED: Check if user exists with proper schema reference
+        existing_user_query = text("SELECT * FROM dr_admin.user WHERE is_approved = 1 AND username = :username")
         existing_user = db.session.execute(existing_user_query, {"username": username}).fetchone()
 
         if not existing_user:
@@ -88,7 +88,7 @@ def login():
         
         print(f"User found: {username}, checking password")
         
-        #Check for correct password
+        # Check for correct password
         if bcrypt.checkpw(password.encode('utf-8'), existing_user.password):
             claims = {
                 "user_id": existing_user.user_id, 
@@ -102,9 +102,15 @@ def login():
             response = make_response(jsonify(claims))
             response.set_cookie("jwt_token", token, httponly=True, secure=False, samesite="Lax")
             
-            # Add CORS headers if needed
-            response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
-            response.headers.add("Access-Control-Allow-Credentials", "true")
+            # FIXED: Update CORS headers for Railway deployment
+            allowed_origins = [
+                "http://localhost:3000",
+                "https://dams-disaster-aid-management-system.netlify.app"
+            ]
+            origin = request.headers.get('Origin')
+            if origin in allowed_origins:
+                response.headers.add("Access-Control-Allow-Origin", origin)
+                response.headers.add("Access-Control-Allow-Credentials", "true")
             
             print(f"Login successful for {username}, role: {existing_user.role}")
             print(f"Response data: {claims}")
@@ -115,11 +121,9 @@ def login():
     except SQLAlchemyError as ex:
         print(f"Database error: {ex}")
         db.session.rollback()
-        # Handle database errors
         return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:
         print(f"Internal server error: {ex}")
-        # Handle other errors
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 
@@ -175,34 +179,32 @@ def reset_forgotten_password():
         username = data_payload.get("username")
         new_password = data_payload.get("new_password")
 
-        #Verify valid inputs
+        # Verify valid inputs
         if not username or not new_password:
-            return jsonify({"error": "Missing requird fields"}), 400
+            return jsonify({"error": "Missing required fields"}), 400
         
-        
-        #Check if user exists
-        existing_user_query = text("SELECT * FROM user WHERE is_approved = 1 AND username = :username")
+        # Check if user exists - FIXED: Use get_db() properly
+        existing_user_query = text("SELECT * FROM dr_admin.user WHERE is_approved = 1 AND username = :username")
         existing_user = db.session.execute(existing_user_query, {"username": username}).fetchone()
 
         if not existing_user:
-            #Return error if username already exists
             return jsonify({"error": "User does not exist"}), 401
         
-        
-        #Change password
+        # Change password
         hashed_new_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-        update_password_query = text("UPDATE user SET password = :password WHERE is_approved = 1 AND username = :username")
+        update_password_query = text("UPDATE dr_admin.user SET password = :password WHERE is_approved = 1 AND username = :username")
         db.session.execute(update_password_query, {"password": hashed_new_password, "username": username})
-        db.session.commit() #Save to db
+        db.session.commit()
 
         return jsonify({"message": "Password successfully updated"}), 200
         
     except SQLAlchemyError as ex:
-        # Handle database errors
+        db.session.rollback()
+        print(f"Database error in reset_forgotten_password: {ex}")
         return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:  
         db.session.rollback()
-        # Handle other errors
+        print(f"General error in reset_forgotten_password: {ex}")
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
 #End Region
 
@@ -512,43 +514,7 @@ def update_pledge():
     except Exception as ex:
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
-@api_routes.route('/getPledges', methods=["GET"])
-def get_pledges():
-    db = get_db()
 
-    user_id = request.args.get('user_id')
-    try:
-        if not user_id:
-            return jsonify({"error": "user_id is required"}), 400
-       
-        # Convert user_id to int
-        try:
-            user_id = int(user_id)
-        except (ValueError, TypeError):
-            return jsonify({"error": "Invalid user_id"}), 400
-       
-        get_pledges_sp = "CALL dr_events.get_pledges(:param_user_id)"
-        result = db.session.execute(text(get_pledges_sp), {"param_user_id": user_id})
-
-        try:
-            rows = result.fetchall()
-
-            if rows:            
-                columns = result.keys()
-                pledges = [dict(zip(columns, row)) for row in rows]
-                return jsonify(pledges), 200   
-            return jsonify([]), 200     
-        except Exception as ex:   
-            print(f"Error processing pledge results: {ex}")
-            return jsonify([]), 200
-        
-    except SQLAlchemyError as ex:
-        db.session.rollback()
-        print(f"Database error in get_pledges: {ex}")
-        return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:
-        print(f"General error in get_pledges: {ex}")
-        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 
 # Matches  
