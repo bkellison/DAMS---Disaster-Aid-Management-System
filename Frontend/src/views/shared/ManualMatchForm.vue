@@ -163,10 +163,10 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 defineExpose({ AppButton });
 const route = useRoute();
@@ -200,7 +200,7 @@ const selectPledge = (pledge) => {
 // Get specific request by ID
 async function getRequestDetails(requestId) {
   try {
-    const response = await axios.get(`http://127.0.0.1:5000/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
+    const response = await api.get(`/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
     if(response.data.length > 0) {
       selectedRequest.value = response.data[0];
       
@@ -215,7 +215,7 @@ async function getRequestDetails(requestId) {
 // Get combined match options (admin inventory + pledges)
 async function getMatchOptions(requestId) {
   try {
-    const response = await axios.get(`http://127.0.0.1:5000/getCombinedMatchOptions?request_id=${requestId}`);
+    const response = await api.get(`/getCombinedMatchOptions?request_id=${requestId}`);
     matchOptions.value = response.data;
     
     // Default to admin tab if there's admin inventory, otherwise pledges
@@ -257,7 +257,7 @@ async function createAdminMatch(request) {
       isAdminSource: true
     };
     
-    await axios.post('http://127.0.0.1:5000/createAdminMatch', matchRequest);
+    await api.post('/createAdminMatch', matchRequest);
     alert('Match created successfully from admin inventory!');
     router.push({ path: `/match-view` });
   } catch (error) {
@@ -280,7 +280,7 @@ async function createPledgeMatch(request, pledge) {
       matchQuantity: pledgeMatchQuantity.value
     };
     
-    await axios.post('http://127.0.0.1:5000/createMatch', matchRequest);
+    await api.post('/createMatch', matchRequest);
     alert('Match created successfully from donor pledge!');
     router.push({ path: `/match-view` });
   } catch (error) {

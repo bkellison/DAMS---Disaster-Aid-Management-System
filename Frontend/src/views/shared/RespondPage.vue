@@ -65,7 +65,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
-import axios from 'axios'
+import api from '@/services/api';
 
 const route = useRoute()
 const router = useRouter()
@@ -88,13 +88,13 @@ onMounted(async () => {
       responseId.value = route.query.responseId
       
       // Fetch existing response data
-      const responseData = await axios.get(`http://127.0.0.1:5000/getResponseDetails/${responseId.value}`)
+      const responseData = await api.get(`/getResponseDetails/${responseId.value}`)
       responseDetails.value = responseData.data.message
       responseQuantity.value = responseData.data.quantity
       requestDetails.value = responseData.data.request
     } else {
       // Fetch request details for new response
-      const response = await axios.get(`http://127.0.0.1:5000/getRequestDetails/${requestId}`)
+      const response = await api.get(`/getRequestDetails/${requestId}`)
       requestDetails.value = response.data
       responseQuantity.value = 1
     }
@@ -116,7 +116,7 @@ const submitResponse = async () => {
         message: responseDetails.value
       }
       
-      const response = await axios.post('http://127.0.0.1:5000/updateResponse', updateData)
+      const response = await api.post('/updateResponse', updateData)
       
       if (response.status === 200) {
         alert('Response updated successfully!')
@@ -133,7 +133,7 @@ const submitResponse = async () => {
         message: responseDetails.value
       }
       
-      const response = await axios.post('http://127.0.0.1:5000/submitResponse', responseData)
+      const response = await api.post('/submitResponse', responseData)
       
       if (response.status === 200 || response.status === 201) {
         alert('Response submitted successfully!')

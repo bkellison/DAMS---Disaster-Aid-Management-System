@@ -288,13 +288,7 @@ const handleSubmit = async () => {
     }
     
     // Call register API
-    const response = await fetch('http://127.0.0.1:5000/requestNewAccount', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData)
-    });
+    const response = await authStore.requestAccount(requestData);
     
     if (response.status === 201) {
       showAlert({

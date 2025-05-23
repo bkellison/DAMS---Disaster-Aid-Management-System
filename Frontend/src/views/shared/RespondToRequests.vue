@@ -30,10 +30,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
 import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -42,7 +42,7 @@ const requests = ref([]);
 
 const loadRequests = async () => {
   try {
-    const response = await axios.get('http://127.0.0.1:5000/getRequestsForResponse');
+    const response = await api.get('/getRequestsForResponse');
     // Only filter out requests where remaining quantity is 0 or less (completely fulfilled)
     // Keep requests that still have remaining quantity > 0 (partially fulfilled or unfulfilled)
     requests.value = response.data.filter(request => 

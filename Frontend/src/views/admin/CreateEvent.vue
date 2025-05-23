@@ -74,9 +74,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 
@@ -149,7 +149,7 @@ const stateOptions = [
 ];
 
 const fetchCategories = async () => {
-  const res = await axios.get('/api/categories')
+  const res = await api.get('/api/categories')
   categories.value = res.data
 }
 
@@ -173,7 +173,7 @@ const submitEvent = async () => {
       zipCode: event.value.zipCode
     }
 
-    await axios.post('/api/admin/events', formattedEvent)
+    await api.post('/api/admin/events', formattedEvent)
     alert('Event created successfully!')
     router.push({ path: '/admin/view-events' })
   } catch (error) {

@@ -67,6 +67,7 @@ import AppAlert from '@/components/common/AppAlert.vue';
 import useFormValidation from '@/composables/useFormValidation';
 import useAlert from '@/composables/useAlert';
 import useLoading from '@/composables/useLoading';
+import api from '@/services/api';
 
 // Initialize router and auth store
 const router = useRouter();
@@ -110,16 +111,9 @@ const handleSubmit = async () => {
     showLoading('Logging in...');
     
     // Call login API
-    const response = await fetch('http://127.0.0.1:5000/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: formValues.username,
-        password: formValues.password,
-      }),
-      credentials: 'include'
+    const response = await api.post('/login', {
+      username: formValues.username,
+      password: formValues.password
     });
     
     if (response.ok) {

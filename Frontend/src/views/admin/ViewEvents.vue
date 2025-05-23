@@ -100,8 +100,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import axios from 'axios'
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const events = ref([])
 const categories = ref([])
@@ -213,7 +213,7 @@ const closeModal = () => {
 
 const fetchEvents = async () => {
   try {
-    const res = await axios.get('/api/admin/events')
+    const res = await api.get('/api/admin/events')
     events.value = res.data
   } catch (error) {
     console.error('Error fetching events:', error)
@@ -222,7 +222,7 @@ const fetchEvents = async () => {
 
 const fetchCategories = async () => {
   try {
-    const res = await axios.get('/api/categories')
+    const res = await api.get('/api/categories')
     categories.value = res.data
   } catch (error) {
     console.error('Error fetching categories:', error)
@@ -232,7 +232,7 @@ const fetchCategories = async () => {
 const deleteEvent = async (id) => {
   if (confirm("Are you sure you want to delete this event?")) {
     try {
-      await axios.delete(`/api/admin/events/${id}`);
+      await api.delete(`/api/admin/events/${id}`);
       await fetchEvents(); // Refresh list
     } catch (err) {
       alert("Failed to delete event: " + err.message);
@@ -243,7 +243,7 @@ const deleteEvent = async (id) => {
 const editEvent = async (event) => {
   try {
     // Get category IDs for this event
-    const categoryRes = await axios.get(`/api/admin/events/${event.event_id}/categories`)
+    const categoryRes = await api.get(`/api/admin/events/${event.event_id}/categories`)
     const categoryIds = categoryRes.data.map(cat => cat.category_id)
 
     // Parse the location string into components
@@ -270,7 +270,7 @@ const updateEvent = async () => {
       location: locationString
     };
     
-    await axios.put(`/api/admin/events/${selectedEvent.value.event_id}`, updateData)
+    await api.put(`/api/admin/events/${selectedEvent.value.event_id}`, updateData)
     await fetchEvents()
     selectedEvent.value = null
     alert('Event updated successfully!')

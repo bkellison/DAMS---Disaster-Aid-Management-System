@@ -136,9 +136,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 const activeTab = ref('add');  // Default to add/edit tab
@@ -174,7 +174,7 @@ const fetchItems = async () => {
   error.value = null
   
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/admin/items')
+    const res = await api.get('/api/admin/items')
     items.value = res.data
     console.log('Fetched items:', items.value)
   } catch (err) {
@@ -188,7 +188,7 @@ const fetchItems = async () => {
 // Fetch all categories from the API
 const fetchCategories = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/getCategories')
+    const res = await api.get('/getCategories')
     categories.value = res.data
   } catch (err) {
     console.error('Error fetching categories:', err)
@@ -201,7 +201,7 @@ const fetchItemAvailability = async () => {
   loadingAvailability.value = true;
   
   try {
-    const res = await axios.get('http://127.0.0.1:5000/getItemAvailability')
+    const res = await api.get('/getItemAvailability')
     availableItems.value = res.data.filter(
       item => item.base_quantity > 0 || item.available_pledged > 0
     );
@@ -235,7 +235,7 @@ const addOrUpdateItem = async () => {
   try {
     if (isEditing.value) {
       // Update existing item
-      const res = await axios.put(`http://127.0.0.1:5000/api/admin/items/${editingItemId.value}`, newItem.value)
+      const res = await api.put(`/api/admin/items/${editingItemId.value}`, newItem.value)
       console.log('Item updated:', res.data)
       
       // Update local list without refreshing from server
@@ -248,7 +248,7 @@ const addOrUpdateItem = async () => {
       editingItemId.value = null
     } else {
       // Create new item
-      const res = await axios.post('http://127.0.0.1:5000/api/admin/items', newItem.value)
+      const res = await api.post('/api/admin/items', newItem.value)
       console.log('Item created:', res.data)
       
       // If response includes the new item with ID, add it to our list
@@ -300,7 +300,7 @@ const resetForm = () => {
 const deleteItem = async (id) => {
   if (confirm("Are you sure you want to delete this item?")) {
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/admin/items/${id}`);
+      await api.delete(`/api/admin/items/${id}`);
       
       // Remove from local list without refreshing
       items.value = items.value.filter(item => item.id !== id);
