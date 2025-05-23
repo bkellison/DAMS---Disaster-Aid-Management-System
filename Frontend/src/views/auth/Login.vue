@@ -3,7 +3,7 @@
     <div class="auth-card">
       <h1 class="auth-header">Login</h1>
       <p class="auth-description">Welcome back! Please enter your credentials.</p>
-      
+
       <form @submit.prevent="handleSubmit">
         <!-- Username field -->
         <AppInput
@@ -14,7 +14,7 @@
           :error="errors.username"
           @update:modelValue="value => handleChange('username', value)"
         />
-        
+
         <!-- Password field -->
         <AppInput
           v-model="formValues.password"
@@ -25,7 +25,7 @@
           :error="errors.password"
           @update:modelValue="value => handleChange('password', value)"
         />
-        
+
         <!-- Remember me checkbox -->
         <div class="form-check">
           <input
@@ -36,17 +36,17 @@
           />
           <label for="remember-me">Remember me</label>
         </div>
-        
+
         <!-- Action buttons -->
         <div class="auth-actions">
           <AppButton type="submit" :loading="isLoading">Login</AppButton>
         </div>
-        
+
         <!-- Alert for errors -->
         <AppAlert v-if="alert.show" :type="alert.type" :title="alert.title" @dismiss="closeAlert">
           {{ alert.message }}
         </AppAlert>
-        
+
         <!-- Links -->
         <div class="auth-links">
           <p>Don't have an account? <RouterLink to="/register">Register</RouterLink></p>
@@ -110,7 +110,7 @@ const handleSubmit = async () => {
   try {
     showLoading('Logging in...');
 
-    // FIXED: Direct API call (already correct in your original code)
+    // Axios call
     const response = await api.post('/login', {
       username: formValues.username,
       password: formValues.password
@@ -122,6 +122,23 @@ const handleSubmit = async () => {
     // Handle "Remember me" preference
     if (formValues.rememberMe) {
       localStorage.setItem('rememberedUsername', formValues.username);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     } else {
       localStorage.removeItem('rememberedUsername');
     }
@@ -132,8 +149,6 @@ const handleSubmit = async () => {
     // Redirect based on user role
     if (authStore.isAdmin) {
       router.push('/admin');
-    } else if (authStore.role === 'Admin Observer') {
-      router.push('/admin'); // Admin Observers go to admin pages but with limited permissions
     } else if (authStore.isDonor) {
       router.push('/donor');
     } else if (authStore.isRecipient) {
