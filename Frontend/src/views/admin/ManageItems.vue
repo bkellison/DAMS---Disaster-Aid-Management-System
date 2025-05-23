@@ -1,119 +1,129 @@
 <template>
-  <div class="manage-items">
-    <div class="tabs">
-      <button :class="{ active: activeTab === 'add' }" @click="activeTab = 'add'">Add/Edit Items</button>
-      <button :class="{ active: activeTab === 'view' }" @click="activeTab = 'view'">View Availability</button>
-    </div>
+  <div class="manage-container">
+    <div class="content-box">
+      <h2 class="manage-header">Manage Donation Items</h2>
+      <p class="description">
+        Add or edit donation items and view available quantities for matching.
+      </p>
 
-    <!-- Add/Edit Items Tab -->
-    <div v-if="activeTab === 'add'" class="form-section">
-      <h2>{{ isEditing ? 'Edit Item' : 'Add New Item' }}</h2>
-      <form @submit.prevent="addOrUpdateItem">
-        <div>
-          <label for="name">Item Name</label>
-          <input type="text" v-model="newItem.name" :disabled="isAdminObserver" required />
-        </div>
-        <div>
-          <label for="category">Category</label>
-          <select v-model="newItem.category_id" :disabled="isAdminObserver" required>
-            <option disabled value="">Select a Category</option>
-            <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
-              {{ category.category_name }}
-            </option>
-          </select>
-        </div>
-        <div>
-          <label for="description">Description</label>
-          <textarea v-model="newItem.description" :disabled="isAdminObserver"></textarea>
-        </div>
-        <div>
-          <label for="quantity">Quantity</label>
-          <input type="number" v-model="newItem.quantity" min="1" :disabled="isAdminObserver" required />
-        </div>
-
-        <AppButton 
-          type="submit" 
-          variant="primary" 
-          :disabled="isAdminObserver"
+      <div class="tabs">
+        <button 
+          :class="['tab-button', { active: activeTab === 'add' }]" 
+          @click="activeTab = 'add'"
         >
-          {{ isEditing ? 'Update Item' : 'Add Item' }}
-        </AppButton>
-        <AppButton 
-          type="button" 
-          variant="secondary" 
-          @click="cancelEdit" 
-          :disabled="isAdminObserver || !isEditing"
+          Add/Edit Items
+        </button>
+        <button 
+          :class="['tab-button', { active: activeTab === 'view' }]" 
+          @click="activeTab = 'view'"
         >
-          Cancel
-        </AppButton>
-      </form>
+          View Available Items
+        </button>
+      </div>
 
-      <hr />
+      <!-- Add/Edit Items Tab -->
+      <div v-if="activeTab === 'add'" class="tab-content">
+        <form @submit.prevent="addOrUpdateItem">
+          <div class="form-group">
+            <label for="category">Category:</label>
+            <select id="category" v-model="newItem.category_id" required>
+              <option disabled value="">Select Category</option>
+              <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
+                {{ cat.category_name }}
+              </option>
+            </select>
+          </div>
 
-      <h3>Existing Items</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td>{{ item.name }}</td>
-            <td>{{ getCategoryName(item.category_id) }}</td>
-            <td>{{ item.description }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>
-              <AppButton 
-                variant="edit" 
-                @click="startEditItem(item)" 
-                :disabled="isAdminObserver"
-              >
-                Edit
-              </AppButton>
-              <AppButton 
-                variant="danger" 
-                @click="deleteItem(item.id)" 
-                :disabled="isAdminObserver"
-              >
-                Delete
-              </AppButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+          <div class="form-group">
+            <label for="name">Item Name:</label>
+            <input id="name" v-model="newItem.name" placeholder="Item Name" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="description">Description (optional):</label>
+            <textarea id="description" v-model="newItem.description" placeholder="Description"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="quantity">Default Quantity:</label>
+            <input id="quantity" type="number" v-model.number="newItem.quantity" placeholder="Default Quantity" min="1" required />
+            <div class="help-text">This is the default quantity for new pledges of this item type.</div>
+          </div>
+          
+          <div class="button-row">
+            <AppButton type="submit" :variant="isEditing ? 'save' : 'add'">
+              {{ isEditing ? 'Update Item' : 'Add Item' }}
+            </AppButton>
+            <AppButton v-if="isEditing" type="button" variant="cancel" @click="cancelEdit">Cancel</AppButton>
+          </div>
+        </form>
+        <hr class="divider" />
+        <div v-if="loading" class="loading">
+          <span class="spinner"></span> Loading items...
+        </div>
+        <div v-else-if="items.length === 0" class="no-items">No items defined yet.</div>
+        <ul v-else class="item-list">
+          <li v-for="item in items" :key="item.id" class="item-entry">
+            <div>
+              <strong>{{ item.name }}</strong>
+              ({{ getCategoryName(item.category_id) }})
+              <div v-if="item.description" class="item-description">{{ item.description }}</div>
+            </div>
+            <div class="item-buttons">
+              <AppButton variant="edit" @click="startEditItem(item)">Edit</AppButton>
+              <AppButton variant="danger" @click="deleteItem(item.id)">Delete</AppButton>
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- View Available Items Tab -->
+      <div v-if="activeTab === 'view'" class="tab-content">
+        <div class="explanation-box">
+          <h4>Understanding Item Availability</h4>
+          <p>This view shows all items that are currently available for matching with requests, including both base quantities (added by admin) and donor pledges.</p>
+        </div>
+        <div v-if="loadingAvailability" class="loading">
+          <span class="spinner"></span> Loading availability data...
+        </div>
 
-    <!-- View Availability Tab -->
-    <div v-else class="availability-section">
-      <h2>Item Availability</h2>
-      <AppButton variant="secondary" @click="refreshAvailability">Refresh</AppButton>
-      <p v-if="loadingAvailability">Loading availability...</p>
-      <table v-else>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Category</th>
-            <th>Base Quantity</th>
-            <th>Pledged</th>
-            <th>Combined Available</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in availableItems" :key="item.item_id">
-            <td>{{ item.item_name }}</td>
-            <td>{{ getCategoryName(item.category_id) }}</td>
-            <td>{{ item.base_quantity }}</td>
-            <td>{{ item.available_pledged }}</td>
-            <td>{{ item.available_combined }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>Total Combined Quantity: {{ totalCombinedQuantity }}</p>
+        <div v-else-if="!availableItems || availableItems.length === 0" class="no-items">
+          No items are currently available for matching.
+        </div>
+        
+        <table v-else class="availability-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Admin Quantity</th>
+              <th>Pledged Quantity</th>
+              <th>Total Available</th>
+              <th>Already Matched</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in availableItems" :key="item.id">
+              <td>{{ item.name }}</td>
+              <td>{{ item.category_name }}</td>
+              <td>{{ item.base_quantity }}</td>
+              <td>{{ item.available_pledged }}</td>
+              <td class="highlight">{{ item.available_combined }}</td>
+              <td>{{ item.total_pledged - item.available_pledged }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="totals-summary">
+          <h4>Total Available Items: {{ totalCombinedQuantity }}</h4>
+          <p>These items are ready to be matched with recipient requests.</p>
+        </div>
+
+        <div class="action-buttons">
+          <AppButton @click="refreshAvailability">Refresh Data</AppButton>
+          <AppButton @click="goToMatchPage" variant="primary">Match Items to Requests</AppButton>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -123,12 +133,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppButton from '@/components/common/AppButton.vue';
 import api from '@/services/api';
-import { useAuthStore } from '@/stores/auth';
+
 
 const router = useRouter();
 const activeTab = ref('add');  // Default to add/edit tab
-const authStore = useAuthStore(); 
-const isAdminObserver = computed(() => authStore.isAdminObserver);
+
+
 
 const newItem = ref({
   name: '',
@@ -220,10 +230,10 @@ const getCategoryName = (categoryId) => {
 // Add or update an item
 const addOrUpdateItem = async () => {
   try {
-    if (isAdminObserver.value) {
-        alert('Admin Observers cannot add or update items.');
-        return;
-      }
+
+
+
+
 
     if (isEditing.value) {
       // Update existing item
@@ -286,15 +296,9 @@ const resetForm = () => {
   }
 }
 
-
-
 // Delete an item
 const deleteItem = async (id) => {
-  if (isAdminObserver.value) {
-    alert('Admin Observers cannot delete items.');
-    return;
-  }
-  
+
   if (confirm("Are you sure you want to delete this item?")) {
     try {
       await api.delete(`/api/admin/items/${id}`);
@@ -315,11 +319,11 @@ const deleteItem = async (id) => {
 
 // Start editing an item
 const startEditItem = (item) => {
-  if (isAdminObserver.value) {
-    alert('Admin Observers cannot edit items.');
-    return;
-  }
-  
+
+
+
+
+
   isEditing.value = true;
   editingItemId.value = item.id;
   
@@ -331,7 +335,7 @@ const startEditItem = (item) => {
     quantity: item.quantity || 1,
     created_by: item.created_by
   };
-  
+
 
   // Scroll to top of the form
   window.scrollTo({
