@@ -110,11 +110,13 @@ const handleSubmit = async () => {
   try {
     showLoading('Logging in...');
 
+    // FIXED: Direct API call (already correct in your original code)
     const response = await api.post('/login', {
       username: formValues.username,
       password: formValues.password
     });
 
+    // ✅ Axios automatically parses JSON
     const data = response.data;
 
     // Handle "Remember me" preference
