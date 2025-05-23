@@ -23,16 +23,10 @@ def create_app():
     except Exception as e:
         print("❌ DB connection failed:", e)
 
-    CORS(app, 
-    origins=[
-        #"http://localhost:3000",  # For local development
-        "https://dams-disaster-aid-management-system.netlify.app",  # For production
-        #"*"
-    ],
-    supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-)
+    CORS(app, origins=[
+        "http://localhost:3000", 
+        "https://dams-disaster-aid-management-system.netlify.app"
+    ], supports_credentials=True)
     
     app.register_blueprint(api_routes)
     app.register_blueprint(communication_routes)
