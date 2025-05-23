@@ -110,61 +110,54 @@ const handleSubmit = async () => {
   try {
     showLoading('Logging in...');
     
-    // Call login API
+    // Call login API using axios (not fetch)
     const response = await api.post('/login', {
       username: formValues.username,
       password: formValues.password
     });
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Handle "Remember me" preference
-      if (formValues.rememberMe) {
-        localStorage.setItem('rememberedUsername', formValues.username);
-      } else {
-        localStorage.removeItem('rememberedUsername');
-      }
-      
-      // Set user data in auth store
-      authStore.setUserData(data);
-      
-      // Redirect based on user role
-      if (authStore.isAdmin) {
-        router.push('/admin');
-      } else if (authStore.isDonor) {
-        router.push('/donor');
-      } else if (authStore.isRecipient) {
-        router.push('/recipient');
-      } else {
-        router.push('/');
-      }
-    } else {
-      // Handle error
-      const errorData = await response.json();
-      showAlert({
-        type: 'error',
-        title: 'Login Failed',
-        message: errorData.error || 'Invalid credentials. Please try again.',
-        duration: 5000
-      });
 
+    // The response data is directly available in response.data with axios
+    const data = response.data;
+
+    // Handle "Remember me" preference
+    if (formValues.rememberMe) {
+      localStorage.setItem('rememberedUsername', formValues.username);
+    } else {
+      localStorage.removeItem('rememberedUsername');
+    }
+
+    // Set user data in auth store
+    authStore.setUserData(data);
+
+    // Redirect based on user role
+    if (authStore.isAdmin) {
+      router.push('/admin');
+    } else if (authStore.isDonor) {
+      router.push('/donor');
+    } else if (authStore.isRecipient) {
+      router.push('/recipient');
+    } else {
+      router.push('/');
     }
   } catch (error) {
     console.error('Login failed:', error);
-    
-    // Show error message
+
+    let errorMessage = 'Connection error. Please try again later.';
+    if (error.response) {
+      // Server responded with an error
+      errorMessage = error.response.data?.error || 'Invalid credentials. Please try again.';
+    }
+
     showAlert({
       type: 'error',
       title: 'Login Failed',
-      message: 'Connection error. Please try again later.',
+      message: errorMessage,
       duration: 5000
     });
   } finally {
     hideLoading();
   }
 };
-
 
 // Redirect if already logged in
 onMounted(() => {
@@ -184,10 +177,10 @@ onMounted(() => {
 .auth-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* Changed from center to flex-start */
-  min-height: calc(100vh - 60px); /* Adjust for header height */
+  align-items: flex-start;
+  min-height: calc(100vh - 60px);
   padding: 20px;
-  padding-top: 80px; /* Add top padding to position content higher */
+  padding-top: 80px;
 }
 
 .auth-card {
@@ -198,7 +191,7 @@ onMounted(() => {
   max-width: 500px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
-  margin-bottom: 40px; /* Added for spacing */
+  margin-bottom: 40px;
 }
 
 .auth-header {
