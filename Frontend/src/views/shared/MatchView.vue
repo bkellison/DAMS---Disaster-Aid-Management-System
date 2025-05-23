@@ -2,8 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import AppButton from '@/components/common/AppButton.vue'
+import api from '@/services/api';
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,7 +15,7 @@ const matches = ref([])
 
 async function getMatches() {
     try {
-        const response = await axios.get(`http://127.0.0.1:5000/getMatches?user_id=${authStore.userId}`)
+        const response = await api.get(`/getMatches?user_id=${authStore.userId}`)
         matches.value = response.data;
         console.log('Matches retrieved:', matches.value);
     } catch (error) {

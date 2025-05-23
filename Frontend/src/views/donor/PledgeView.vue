@@ -2,8 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -14,10 +14,20 @@ const pledges = ref([])
 
 async function getPledges() {
     try {
-        const response = await axios.get(`http://127.0.0.1:5000/getPledges?user_id=${authStore.userId}`)
+        const response = await api.get(`/getPledges?user_id=${authStore.userId}`)
         pledges.value = response.data;
     } catch (error) {
         console.error('Error getting pledges:', error);
+        throw error;
+    }
+}
+
+async function cancelPledge(pledge_id) {
+    try {
+        await api.post(`/cancelPledge/${pledge_id}`)
+        getPledges()
+    } catch (error) {
+        console.error('Error cancelling pledge:', error);
         throw error;
     }
 }
@@ -28,16 +38,6 @@ onMounted(() => {
 
 const goToPledgeForm = () => {
   router.push({ path: '/create-pledge' })
-}
-
-async function cancelPledge(pledge_id) {
-    try {
-        await axios.post(`http://127.0.0.1:5000/cancelPledge/${pledge_id}`)
-        getPledges()
-    } catch (error) {
-        console.error('Error cancelling pledge:', error);
-        throw error;
-    }
 }
 
 const rowToEditId = ref(null)
@@ -63,7 +63,7 @@ async function updatePledge(pledge, qty) {
     };
 
     try {
-        const response = await axios.post('http://127.0.0.1:5000/updatePledge', updatePledgeObject);
+        const response = await api.post('/updatePledge', updatePledgeObject);
         router.push({ path: `/pledge-view`, replace: true });
     } catch (error) {
         console.error('Error creating pledge:', error);

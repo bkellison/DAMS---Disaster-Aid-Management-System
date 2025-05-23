@@ -78,6 +78,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppButton from '@/components/common/AppButton.vue'
 import axios from 'axios'
+import api from '@/services/api';
 
 const route = useRoute()
 const router = useRouter()
@@ -123,7 +124,7 @@ async function fetchShippingInfo() {
   try {
     const matchId = route.params.id
     console.log('Fetching shipping info for match ID:', matchId)
-    const response = await axios.get(`http://127.0.0.1:5000/api/getShippingInfo/${matchId}`)
+    const response = await api.get(`/api/getShippingInfo/${matchId}`)
     console.log('Response:', response.data)
     shippingInfo.value = response.data
     
@@ -160,8 +161,7 @@ async function updateShipping() {
         user_id: authStore.userId
       }
       
-      await axios.post('http://127.0.0.1:5000/api/updateShippingStatus', data)
-      
+      await api.post('/api/updateShippingStatus', data)
       alert('Shipping information updated successfully!')
       await fetchShippingInfo() // Refresh data
       

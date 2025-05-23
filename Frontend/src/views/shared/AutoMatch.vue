@@ -126,10 +126,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue'; 
+import api from '@/services/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,7 +158,7 @@ function capitalizeFirstLetter(string) {
 // Get auto-match algorithms
 async function getMatchType() {
   try {
-    const response = await axios.get(`http://127.0.0.1:5000/api/getAutoMatchType`);
+    const response = await api.get(`/api/getAutoMatchType`);
     if (response.data.length > 0) {
       matchTypes.value = response.data;
     }
@@ -170,7 +170,7 @@ async function getMatchType() {
 // Get request details
 async function getRequestDetails(requestId) {
   try {
-    const response = await axios.get(`http://127.0.0.1:5000/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
+    const response = await api.get(`/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
     if (response.data.length > 0) {
       selectedRequest.value = response.data[0];
       
@@ -185,7 +185,7 @@ async function getRequestDetails(requestId) {
 // Get combined inventory options (admin + pledges)
 async function getCombinedOptions(requestId) {
   try {
-    const response = await axios.get(`http://127.0.0.1:5000/getCombinedMatchOptions?request_id=${requestId}`);
+    const response = await api.get(`/getCombinedMatchOptions?request_id=${requestId}`);
     combinedOptions.value = response.data;
     
     // Set the default inventory priority based on what's available
@@ -216,7 +216,7 @@ async function createAutoMatch(selectedRequest, matchType) {
       inventory_priority: inventoryPriority.value
     };
     
-    const response = await axios.post('http://127.0.0.1:5000/api/autoMatch', matchRequest);
+    const response = await api.post('/api/autoMatch', matchRequest);
     
     if (response.status === 200) {
       alert(response.data.message || 'Match created successfully!');

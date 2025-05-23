@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { RouterView, useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import AppButton from '@/components/common/AppButton.vue';
 
 const router = useRouter();

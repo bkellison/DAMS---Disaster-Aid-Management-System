@@ -84,8 +84,8 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import axios from 'axios';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 export default {
   components: {
@@ -144,11 +144,11 @@ export default {
     onMounted(async () => {
       try {
         // Load events
-        const eventsResponse = await axios.get('http://127.0.0.1:5000/getActiveEvents');
+        const eventsResponse = await api.get('/getActiveEvents');
         events.value = eventsResponse.data || [];
 
         // Load match types
-        const matchTypesResponse = await axios.get('http://127.0.0.1:5000/getMatchTypes');
+        const matchTypesResponse = await api.get('/getMatchTypes');
         matchTypes.value = matchTypesResponse.data || [];
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -160,7 +160,7 @@ export default {
       if (!selectedEvent.value) return;
 
       try {
-        const response = await axios.get(`http://127.0.0.1:5000/getEventCategories/${selectedEvent.value}`);
+        const response = await api.get(`/getEventCategories/${selectedEvent.value}`);
         categories.value = response.data || [];
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -172,7 +172,7 @@ export default {
       if (!selectedCategory.value) return;
 
       try {
-        const response = await axios.get(`http://127.0.0.1:5000/getItemsByCategory/${selectedCategory.value}`);
+        const response = await api.get(`/getItemsByCategory/${selectedCategory.value}`);
         items.value = response.data || [];
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -210,7 +210,7 @@ export default {
       };
 
       try {
-        const response = await axios.post('http://127.0.0.1:5000/createRequest', requestData);
+        const response = await api.post('/createRequest', requestData);
 
         if (response.status === 201) {
           alert('Request submitted successfully!');

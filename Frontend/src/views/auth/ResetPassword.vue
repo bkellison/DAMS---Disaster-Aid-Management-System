@@ -61,7 +61,7 @@ import AppButton from '@/components/common/AppButton.vue';
 import AppAlert from '@/components/common/AppAlert.vue';
 import useAlert from '@/composables/useAlert';
 import useLoading from '@/composables/useLoading';
-import axios from 'axios';
+
 
 const router = useRouter();
 const { alert, showAlert, closeAlert } = useAlert();
@@ -126,9 +126,8 @@ const resetPassword = async () => {
       username: username.value,
       new_password: newPassword.value
     };
-    
-    const response = await axios.post('http://127.0.0.1:5000/resetForgottenPassword', resetData);
-    
+  
+    const response = await authStore.resetPassword(resetData);
     if (response.status === 200) {
       showAlert({
         type: 'success',

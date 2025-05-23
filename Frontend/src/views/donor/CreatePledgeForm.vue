@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 
@@ -23,7 +23,7 @@ const filteredItems = computed(() =>
 
 async function getCategories() {
     try {
-        const response = await axios.get('http://127.0.0.1:5000/getCategories')
+        const response = await api.get('/getCategories')
         categories.value = response.data
     } catch (error) {
         console.log('/getCategories failed', error)
@@ -32,7 +32,7 @@ async function getCategories() {
 
 async function getItems() {
     try {
-        const response = await axios.get('http://127.0.0.1:5000/getItems')
+        const response = await api.get('/getItems')
         items.value = response.data
     } catch (error) {
         console.log('/getItems failed', error)
@@ -62,8 +62,8 @@ async function createPledge() {
         user_id: authStore.userId
     };
 
-    try {
-        const response = await axios.post('http://127.0.0.1:5000/createPledge', createPledgeObject);
+     try {
+        const response = await api.post('/createPledge', createPledgeObject);
         router.push({ path: `/pledge-view`, replace: true });
     } catch (error) {
         console.error('Error creating pledge:', error);

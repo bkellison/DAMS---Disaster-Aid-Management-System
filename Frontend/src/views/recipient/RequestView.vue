@@ -2,8 +2,8 @@
 import { ref, onMounted, computed  } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { RouterView, useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import AppButton from '@/components/common/AppButton.vue';
+import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -13,7 +13,7 @@ const requests = ref([])
 
 async function getRequests() {
     try {
-        const response = await axios.get(`http://127.0.0.1:5000/getRequests?user_id=${authStore.userId}`)
+        const response = await api.get(`/getRequests?user_id=${authStore.userId}`)
         requests.value = response.data.filter(i => i.request_quantity_remaining > 0);
     } catch (error) {
         console.error('Error getting requests:', error);
