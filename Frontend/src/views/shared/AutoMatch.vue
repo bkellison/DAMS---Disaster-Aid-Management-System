@@ -3,6 +3,11 @@
     <div class="content-box">
       <h1 class="auto-match-header">Auto Match</h1>
       
+      <!-- Admin Observer Warning -->
+      <div v-if="isAdminObserver" class="observer-warning">
+        <strong>👁️ Admin Observer Mode:</strong> You can view the auto-matching interface but cannot create matches. This is a read-only preview of the automatic matching process.
+      </div>
+      
       <div v-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
         Request has enough pledges and matches to fulfill.
       </div>
@@ -65,10 +70,11 @@
                   id="priority-admin" 
                   value="admin" 
                   v-model="inventoryPriority"
-                  :disabled="combinedOptions.base_quantity === 0"
+                  :disabled="combinedOptions.base_quantity === 0 || isAdminObserver"
+                  :class="{ 'disabled-field': isAdminObserver }"
                 />
-                <label for="priority-admin">Admin Inventory First</label>
-                <span class="option-description">Use admin inventory before donor pledges</span>
+                <label for="priority-admin" :class="{ 'disabled-label': isAdminObserver }">Admin Inventory First</label>
+                <span class="option-description" :class="{ 'disabled-text': isAdminObserver }">Use admin inventory before donor pledges</span>
               </div>
               
               <div class="radio-option">
@@ -77,10 +83,11 @@
                   id="priority-pledges" 
                   value="pledges" 
                   v-model="inventoryPriority"
-                  :disabled="combinedOptions.total_from_pledges === 0"
+                  :disabled="combinedOptions.total_from_pledges === 0 || isAdminObserver"
+                  :class="{ 'disabled-field': isAdminObserver }"
                 />
-                <label for="priority-pledges">Donor Pledges First</label>
-                <span class="option-description">Use donor pledges before admin inventory</span>
+                <label for="priority-pledges" :class="{ 'disabled-label': isAdminObserver }">Donor Pledges First</label>
+                <span class="option-description" :class="{ 'disabled-text': isAdminObserver }">Use donor pledges before admin inventory</span>
               </div>
               
               <div class="radio-option">
@@ -89,9 +96,11 @@
                   id="priority-auto" 
                   value="auto" 
                   v-model="inventoryPriority"
+                  :disabled="isAdminObserver"
+                  :class="{ 'disabled-field': isAdminObserver }"
                 />
-                <label for="priority-auto">Automatic (Recommended)</label>
-                <span class="option-description">Let the system decide the optimal source based on match method</span>
+                <label for="priority-auto" :class="{ 'disabled-label': isAdminObserver }">Automatic (Recommended)</label>
+                <span class="option-description" :class="{ 'disabled-text': isAdminObserver }">Let the system decide the optimal source based on match method</span>
               </div>
             </div>
           </div>
@@ -102,19 +111,29 @@
               <button 
                 :class="[
                   'match-btn',
-                  { 'match-btn-preferred': isPreferredMethod(matchType) }
+                  { 'match-btn-preferred': isPreferredMethod(matchType) },
+                  { 'disabled-button': isAdminObserver }
                 ]"
-                :disabled="isAdminObserver"
+                :disabled="isAdminObserver || !canCreateMatches"
                 @click="createAutoMatch(selectedRequest, matchType)"
+                :title="isAdminObserver ? 'Admin Observers cannot create matches' : `Create auto match using ${matchType.name} algorithm`"
               >
-                <span class="match-name">{{ capitalizeFirstLetter(matchType.name) }}</span>
+                <span class="match-name">
+                  {{ isAdminObserver ? '👁️ View Only - ' : '' }}{{ capitalizeFirstLetter(matchType.name) }}
+                </span>
                 <span class="match-description">{{ matchType.description }}</span>
+                <span v-if="isPreferredMethod(matchType)" class="preferred-badge">Recipient's Preference</span>
               </button>
             </div>
           </div>
           
+          <div v-if="isAdminObserver" class="observer-notice">
+            <p>🔒 Admin Observers can view the auto-matching interface and see all available algorithms and inventory.</p>
+            <p>However, you cannot create matches or modify data. This ensures you can monitor the system without making changes.</p>
+          </div>
+          
           <div class="button-group">
-            <AppButton variant="cancel" @click="goBack">Cancel</AppButton>
+            <AppButton variant="cancel" @click="goBack">{{ isAdminObserver ? 'Back to View' : 'Cancel' }}</AppButton>
           </div>
         </div>
       </div>
@@ -289,6 +308,19 @@ onMounted(() => {
   margin-bottom: 30px;
 }
 
+/* Observer warning styling */
+.observer-warning {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  color: #1565c0;
+  text-align: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
+}
+
 .info-section, .form-section {
   background: #ffffff;
   padding: 25px;
@@ -415,6 +447,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  transition: all 0.3s ease;
 }
 
 .radio-option input[type="radio"] {
@@ -428,17 +461,35 @@ onMounted(() => {
   margin-top: -20px;
   display: block;
   margin-bottom: 5px;
+  transition: color 0.3s ease;
 }
 
 .option-description {
   font-size: 14px;
   color: #666;
   margin-left: 24px;
+  transition: color 0.3s ease;
 }
 
+/* Disabled radio option styling */
 .radio-option input[type="radio"]:disabled + label,
 .radio-option input[type="radio"]:disabled ~ .option-description {
   color: #aaa;
+}
+
+.disabled-field {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.disabled-label {
+  color: #aaa !important;
+  cursor: not-allowed;
+}
+
+.disabled-text {
+  color: #ccc !important;
+  cursor: not-allowed;
 }
 
 .match-options {
@@ -462,9 +513,10 @@ onMounted(() => {
   align-items: flex-start;
   gap: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
-.match-btn:hover {
+.match-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   background: linear-gradient(to right, #f0d5b0, #f5e1c5);
@@ -476,10 +528,26 @@ onMounted(() => {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
-.match-btn-preferred:hover {
+.match-btn-preferred:hover:not(:disabled) {
   background: linear-gradient(to right, #c9a876, #b8975c) !important;
   transform: translateY(-4px) !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Disabled button styling */
+.disabled-button,
+.match-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background: #cccccc !important;
+  color: #666666 !important;
+}
+
+.disabled-button:hover,
+.match-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
+  background: #cccccc !important;
 }
 
 .match-name {
@@ -488,9 +556,56 @@ onMounted(() => {
   color: #5c4033;
 }
 
+.disabled-button .match-name,
+.match-btn:disabled .match-name {
+  color: #666666 !important;
+}
+
 .match-description {
   font-size: 14px;
   color: #666;
+}
+
+.disabled-button .match-description,
+.match-btn:disabled .match-description {
+  color: #999999 !important;
+}
+
+.preferred-badge {
+  background-color: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 5px;
+  display: inline-block;
+}
+
+.disabled-button .preferred-badge,
+.match-btn:disabled .preferred-badge {
+  background-color: #999999 !important;
+}
+
+.observer-notice {
+  background: linear-gradient(135deg, #fff3e0, #fce4ec);
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 30px;
+  text-align: center;
+  color: #e65100;
+}
+
+.observer-notice p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.observer-notice p:first-child {
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .button-group {
@@ -520,6 +635,12 @@ onMounted(() => {
   
   .inventory-stat {
     min-width: auto;
+  }
+
+  .observer-warning,
+  .observer-notice {
+    font-size: 14px;
+    padding: 15px;
   }
 }
 </style>

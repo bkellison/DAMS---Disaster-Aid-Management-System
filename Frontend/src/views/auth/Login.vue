@@ -129,14 +129,21 @@ const handleSubmit = async () => {
     // Set user data in auth store
     authStore.setUserData(data);
 
-    // Redirect based on user role
-    if (authStore.isAdmin) {
+    console.log('Login successful, user role:', authStore.role);
+    console.log('isAdmin:', authStore.isAdmin, 'isAdminObserver:', authStore.isAdminObserver);
+
+    // Redirect based on user role - UPDATED for Admin Observer
+    if (authStore.isAdmin || authStore.isAdminObserver) {
+      console.log('Redirecting to admin dashboard');
       router.push('/admin');
     } else if (authStore.isDonor) {
+      console.log('Redirecting to donor dashboard');
       router.push('/donor');
     } else if (authStore.isRecipient) {
+      console.log('Redirecting to recipient dashboard');
       router.push('/recipient');
     } else {
+      console.log('Unknown role, staying on current page');
       router.push('/');
     }
   } catch (error) {
@@ -144,7 +151,6 @@ const handleSubmit = async () => {
 
     let errorMessage = 'Connection error. Please try again later.';
     if (error.response) {
-      // Server responded with an error
       errorMessage = error.response.data?.error || 'Invalid credentials. Please try again.';
     }
 
@@ -158,6 +164,20 @@ const handleSubmit = async () => {
     hideLoading();
   }
 };
+
+// Also update the onMounted redirect check
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    console.log('Already authenticated, redirecting...');
+    if (authStore.isAdmin || authStore.isAdminObserver) {
+      router.push('/admin');
+    } else if (authStore.isDonor) {
+      router.push('/donor');
+    } else if (authStore.isRecipient) {
+      router.push('/recipient');
+    }
+  }
+});
 
 // Redirect if already logged in
 onMounted(() => {

@@ -3,6 +3,11 @@
     <div class="content-box">
       <h1 class="match-header">Create Manual Match</h1>
       
+      <!-- Admin Observer Warning -->
+      <div v-if="isAdminObserver" class="observer-warning">
+        <strong>Admin Observer Mode:</strong> You can view the matching interface but cannot create matches. This is a read-only preview of the manual matching process.
+      </div>
+      
       <div v-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
         Request has enough pledges and matches to fulfill.
       </div>
@@ -49,7 +54,7 @@
               class="tab-button" 
               :class="{ active: activeTab === 'admin' }"
               @click="activeTab = 'admin'"
-              :disabled="matchOptions.base_quantity <= 0"
+              :disabled="matchOptions.base_quantity <= 0 || isAdminObserver"
             >
               Admin Inventory ({{ matchOptions.base_quantity }})
             </button>
@@ -57,7 +62,7 @@
               class="tab-button" 
               :class="{ active: activeTab === 'pledges' }"
               @click="activeTab = 'pledges'"
-              :disabled="matchOptions.available_pledges.length === 0"
+              :disabled="matchOptions.available_pledges.length === 0 || isAdminObserver"
             >
               Donor Pledges ({{ matchOptions.total_from_pledges }})
             </button>
@@ -76,16 +81,19 @@
                   v-model="adminMatchQuantity" 
                   min="1" 
                   :max="Math.min(matchOptions.base_quantity, selectedRequest.request_quantity_remaining)" 
+                  :disabled="isAdminObserver"
+                  :class="{ 'disabled-field': isAdminObserver }"
                 />
               </div>
               
               <button 
                 class="match-btn" 
                 @click="createAdminMatch(selectedRequest)"
-                :disabled="isAdminObserver"
-                title="Only Admins can perform this action"
+                :disabled="isAdminObserver || !canCreateMatches"
+                :class="{ 'disabled-button': isAdminObserver }"
+                :title="isAdminObserver ? 'Admin Observers cannot create matches' : 'Create match from admin inventory'"
               >
-                Match from Admin Inventory
+                {{ isAdminObserver ? 'View Only - Cannot Create Match' : 'Match from Admin Inventory' }}
               </button>
             </div>
           </div>
@@ -98,8 +106,12 @@
               <div v-for="pledge in matchOptions.available_pledges" :key="pledge.pledge_id" class="pledge-option">
                 <button 
                   class="pledge-btn" 
-                  :class="{ 'selected': selectedPledge && selectedPledge.pledge_id === pledge.pledge_id }"
-                  @click="selectPledge(pledge)"
+                  :class="{ 
+                    'selected': selectedPledge && selectedPledge.pledge_id === pledge.pledge_id,
+                    'disabled-button': isAdminObserver 
+                  }"
+                  @click="!isAdminObserver && selectPledge(pledge)"
+                  :disabled="isAdminObserver"
                 >
                   <div class="pledge-donor">{{ pledge.donor_name || 'Donor #' + pledge.donor_id }}</div>
                   <div class="pledge-details">
@@ -127,16 +139,19 @@
                   v-model="pledgeMatchQuantity" 
                   min="1" 
                   :max="Math.min(selectedPledge.available_quantity, selectedRequest.request_quantity_remaining)" 
+                  :disabled="isAdminObserver"
+                  :class="{ 'disabled-field': isAdminObserver }"
                 />
               </div>
               
               <button 
                 class="match-btn"
                 @click="createPledgeMatch(selectedRequest, selectedPledge)"
-                :disabled="isAdminObserver"
-                title="Only Admins can perform this action"
+                :disabled="isAdminObserver || !canCreateMatches"
+                :class="{ 'disabled-button': isAdminObserver }"
+                :title="isAdminObserver ? 'Admin Observers cannot create matches' : 'Create match from pledge'"
               >
-                Create Match from Pledge
+                {{ isAdminObserver ? 'View Only - Cannot Create Match' : 'Create Match from Pledge' }}
               </button>
             </div>
           </div>
@@ -144,20 +159,29 @@
           <div class="auto-match-option">
             <h3>Or Use Auto Match</h3>
             <p>Let the system automatically match this request with the best available sources.</p>
-            <app-button variant="auto-match" @click="goToAutoMatch(selectedRequest.request_id)">
-              Auto Match ({{ matchOptions.total_available }} available)
+            <app-button 
+              variant="auto-match" 
+              @click="goToAutoMatch(selectedRequest.request_id)"
+              :disabled="isAdminObserver"
+              :class="{ 'disabled-button': isAdminObserver }"
+            >
+              {{ isAdminObserver ? 'View Only Mode' : `Auto Match (${matchOptions.total_available} available)` }}
             </app-button>
           </div>
           
+          <div v-if="isAdminObserver" class="observer-notice">
+            <p>Admin Observers can view the matching interface and see all available inventory and pledges.</p>
+            <p>However, you cannot create matches or modify data. This ensures you can monitor the system without making changes.</p>
+          </div>
+          
           <div class="button-group">
-            <app-button variant="cancel" @click="goBack">Cancel</app-button>
+            <app-button variant="cancel" @click="goBack">{{ isAdminObserver ? 'Back to View' : 'Cancel' }}</app-button>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
@@ -375,6 +399,19 @@ onMounted(() => {
   margin-bottom: 30px;
 }
 
+/* Observer warning styling */
+.observer-warning {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  color: #1565c0;
+  text-align: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
+}
+
 .no-matches-message {
   background-color: #ffecb3;
   color: #856404;
@@ -463,11 +500,13 @@ onMounted(() => {
   position: relative;
   font-size: 16px;
   font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .tab-button:disabled {
   color: #ccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .tab-button.active {
@@ -533,6 +572,34 @@ onMounted(() => {
   background: linear-gradient(135deg, #6A3E2B, #8B5E3C);
 }
 
+/* Disabled button styling */
+.disabled-button,
+.pledge-btn:disabled,
+.match-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background-color: #cccccc !important;
+  color: #666666 !important;
+}
+
+.disabled-button:hover,
+.pledge-btn:disabled:hover,
+.match-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: #cccccc !important;
+}
+
+/* Disabled field styling */
+.disabled-field,
+input:disabled {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  border-color: #dee2e6 !important;
+}
+
 .pledge-donor {
   font-weight: 600;
   margin-bottom: 5px;
@@ -593,6 +660,7 @@ input {
   font-size: 16px;
   width: 100%;
   max-width: 200px;
+  transition: all 0.3s ease;
 }
 
 .button-group {
@@ -626,6 +694,27 @@ input {
   margin: 20px 0;
 }
 
+.observer-notice {
+  background: linear-gradient(135deg, #fff3e0, #fce4ec);
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 30px;
+  text-align: center;
+  color: #e65100;
+}
+
+.observer-notice p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.observer-notice p:first-child {
+  font-weight: 600;
+  font-size: 15px;
+}
+
 @media (max-width: 768px) {
   .content-box {
     padding: 20px;
@@ -642,6 +731,12 @@ input {
   
   .inventory-stats {
     flex-direction: column;
+  }
+
+  .observer-warning,
+  .observer-notice {
+    font-size: 14px;
+    padding: 15px;
   }
 }
 </style>

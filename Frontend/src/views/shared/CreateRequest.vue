@@ -6,13 +6,19 @@
       
       <!-- Show warning for Admin Observer -->
       <div v-if="isAdminObserver" class="observer-warning">
-        <strong>Admin Observer Mode:</strong> You can view this form but cannot submit requests.
+        <strong>Admin Observer Mode:</strong> You can view this form but cannot submit requests. This is a read-only preview of the request creation process.
       </div>
       
       <form @submit.prevent="submitRequest">
         <div class="form-group">
           <label>Select Disaster Event:</label>
-          <select v-model="selectedEvent" required @change="onEventChange" :disabled="isAdminObserver">
+          <select 
+            v-model="selectedEvent" 
+            required 
+            @change="onEventChange" 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          >
             <option value="" disabled>-- Select an event --</option>
             <option v-for="event in events" :key="event.event_id" :value="event.event_id">
               {{ event.event_name }}
@@ -36,7 +42,12 @@
 
         <div class="form-group">
           <label>Select Category:</label>
-          <select v-model="selectedCategory" required :disabled="isAdminObserver">
+          <select 
+            v-model="selectedCategory" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          >
             <option value="" disabled>-- Select a category --</option>
             <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
               {{ category.category_name }}
@@ -46,7 +57,11 @@
 
         <div class="form-group" v-if="items.length > 0">
           <label>Select Specific Item (Optional):</label>
-          <select v-model="selectedItem" :disabled="isAdminObserver">
+          <select 
+            v-model="selectedItem" 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          >
             <option value="">-- No specific item --</option>
             <option v-for="item in items" :key="item.item_id" :value="item.item_id">
               {{ item.name }}
@@ -56,12 +71,24 @@
 
         <div class="form-group">
           <label>Quantity Needed:</label>
-          <input type="number" v-model="quantity" min="1" required :disabled="isAdminObserver" />
+          <input 
+            type="number" 
+            v-model="quantity" 
+            min="1" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }" 
+          />
         </div>
 
         <div class="form-group">
           <label>Preferred Matching Method:</label>
-          <select v-model="preferredMatchType" required :disabled="isAdminObserver">
+          <select 
+            v-model="preferredMatchType" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          >
             <option value="" disabled>-- Select matching preference --</option>
             <option v-for="matchType in matchTypes" :key="matchType.match_type_id" :value="matchType.match_type_id">
               {{ matchType.name }} - {{ matchType.description }}
@@ -74,20 +101,29 @@
 
         <div class="form-group">
           <label>Additional Details:</label>
-          <textarea v-model="details" rows="4" placeholder="Describe your specific needs..." :disabled="isAdminObserver"></textarea>
+          <textarea 
+            v-model="details" 
+            rows="4" 
+            placeholder="Describe your specific needs..." 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          ></textarea>
         </div>
 
         <div class="auth-actions">
           <AppButton 
             type="submit" 
             variant="primary" 
-            :disabled="isAdminObserver"
+            :disabled="isAdminObserver || !canCreateRequests"
+            :class="{ 'disabled-button': isAdminObserver }"
           >
-            Submit Request
+            {{ isAdminObserver ? 'View Only Mode - Cannot Submit' : 'Submit Request' }}
           </AppButton>
-          <p v-if="isAdminObserver" class="observer-notice">
-            Admin Observers cannot create requests
-          </p>
+          
+          <div v-if="isAdminObserver" class="observer-notice">
+            <p>Admin Observers can view all forms and data but cannot create new requests or modify existing data.</p>
+            <p>This ensures you can monitor the system without accidentally making changes.</p>
+          </div>
         </div>
       </form>
     </div>
@@ -123,9 +159,15 @@ export default {
     const items = ref([]);
     const matchTypes = ref([]);
 
-    // FIXED: Add isAdminObserver computed property
+    // Admin Observer and permission checks
     const isAdminObserver = computed(() => {
+      console.log('Checking isAdminObserver:', authStore.isAdminObserver, 'Role:', authStore.role);
       return authStore.isAdminObserver;
+    });
+
+    const canCreateRequests = computed(() => {
+      console.log('Checking canCreateRequests:', authStore.canCreateRequests, 'Role:', authStore.role);
+      return authStore.canCreateRequests;
     });
 
     // Get details of the selected event
@@ -147,8 +189,13 @@ export default {
 
     // Handle event selection change
     const onEventChange = () => {
-      // Don't process changes if user is Admin Observer
-      if (isAdminObserver.value) return;
+      console.log('Event selection changed, isAdminObserver:', isAdminObserver.value);
+      
+      // Allow Admin Observer to view changes but don't fetch data
+      if (isAdminObserver.value) {
+        console.log('Admin Observer detected, not fetching categories');
+        return;
+      }
       
       // Clear categories and items when event changes
       categories.value = [];
@@ -164,14 +211,23 @@ export default {
 
     // Load available events and match types on mount
     onMounted(async () => {
+      console.log('Component mounted, loading initial data...');
       try {
-        // Load events
+        // Load events (everyone can see events)
         const eventsResponse = await api.get('/getActiveEvents');
         events.value = eventsResponse.data || [];
+        console.log('Loaded events:', events.value.length);
 
-        // Load match types
+        // Load match types (everyone can see match types)
         const matchTypesResponse = await api.get('/getMatchTypes');
         matchTypes.value = matchTypesResponse.data || [];
+        console.log('Loaded match types:', matchTypes.value.length);
+
+        // For demo purposes, if Admin Observer, pre-select first event to show form
+        if (isAdminObserver.value && events.value.length > 0) {
+          selectedEvent.value = events.value[0].event_id;
+          // Don't fetch categories, just show the form structure
+        }
       } catch (error) {
         console.error('Error fetching initial data:', error);
         alert('Failed to load form data. Please refresh the page.');
@@ -180,11 +236,19 @@ export default {
 
     // Load categories when an event is selected
     const fetchCategories = async () => {
-      if (!selectedEvent.value || isAdminObserver.value) return;
+      if (!selectedEvent.value) return;
+      
+      // Admin Observer can't fetch dynamic data, but we can show them sample data
+      if (isAdminObserver.value) {
+        console.log('Admin Observer - not fetching categories');
+        return;
+      }
 
+      console.log('Fetching categories for event:', selectedEvent.value);
       try {
         const response = await api.get(`/getEventCategories/${selectedEvent.value}`);
         categories.value = response.data || [];
+        console.log('Loaded categories:', categories.value.length);
       } catch (error) {
         console.error('Error fetching categories:', error);
         alert('Failed to load categories. Please try again.');
@@ -193,11 +257,19 @@ export default {
 
     // Load items when a category is selected
     const fetchItems = async () => {
-      if (!selectedCategory.value || isAdminObserver.value) return;
+      if (!selectedCategory.value) return;
+      
+      // Admin Observer can't fetch dynamic data
+      if (isAdminObserver.value) {
+        console.log('Admin Observer - not fetching items');
+        return;
+      }
 
+      console.log('Fetching items for category:', selectedCategory.value);
       try {
         const response = await api.get(`/getItemsByCategory/${selectedCategory.value}`);
         items.value = response.data || [];
+        console.log('Loaded items:', items.value.length);
       } catch (error) {
         console.error('Error fetching items:', error);
         alert('Failed to load items. Please try again.');
@@ -206,7 +278,12 @@ export default {
 
     // Watch for category selection change
     watch(selectedCategory, (newValue) => {
-      if (isAdminObserver.value) return; // Don't process for observers
+      console.log('Category changed to:', newValue, 'isAdminObserver:', isAdminObserver.value);
+      
+      if (isAdminObserver.value) {
+        console.log('Admin Observer - skipping item fetch');
+        return;
+      }
       
       if (newValue) {
         fetchItems();
@@ -219,9 +296,20 @@ export default {
 
     // Submit the request
     const submitRequest = async () => {
+      console.log('Submit request called');
+      console.log('isAdminObserver:', isAdminObserver.value);
+      console.log('canCreateRequests:', canCreateRequests.value);
+      console.log('authStore.role:', authStore.role);
+
       // Check if user is Admin Observer
       if (isAdminObserver.value) {
-        alert('Admin Observers cannot create requests.');
+        alert('Admin Observers cannot create requests. This is a view-only mode.');
+        return;
+      }
+
+      // Check general permission
+      if (!canCreateRequests.value) {
+        alert('You do not have permission to create requests.');
         return;
       }
 
@@ -237,6 +325,11 @@ export default {
         return;
       }
 
+      if (!quantity.value || quantity.value < 1) {
+        alert('Please enter a valid quantity.');
+        return;
+      }
+
       const requestData = {
         user_id: authStore.userId,
         event_id: selectedEvent.value,
@@ -247,6 +340,8 @@ export default {
         status: 'pending',
         preferred_match_type_id: preferredMatchType.value
       };
+
+      console.log('Submitting request data:', requestData);
 
       try {
         const response = await api.post('/createRequest', requestData);
@@ -288,7 +383,8 @@ export default {
       formatDate,
       onEventChange,
       submitRequest,
-      isAdminObserver // FIXED: Return the computed property
+      isAdminObserver,
+      canCreateRequests
     };
   }
 };
@@ -337,13 +433,15 @@ export default {
 
 /* Observer warning styling */
 .observer-warning {
-  background-color: #fff3cd;
-  border: 1px solid #ffeaa7;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-  color: #856404;
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  color: #1565c0;
   text-align: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
 }
 
 /* Event location display styling */
@@ -409,15 +507,19 @@ input, select, textarea {
   font-family: 'Poppins', sans-serif;
   background-color: white;
   width: 100%;
+  transition: all 0.3s ease;
 }
 
+/* Disabled field styling */
+.disabled-field,
 input:disabled, 
 select:disabled, 
 textarea:disabled {
-  background-color: #f0f0f0;
-  color: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.7;
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  border-color: #dee2e6 !important;
 }
 
 .help-text {
@@ -430,13 +532,43 @@ textarea:disabled {
 .auth-actions {
   margin-top: 30px;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.disabled-button {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background-color: #cccccc !important;
+  color: #666666 !important;
+}
+
+.disabled-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .observer-notice {
-  color: #dc3545;
-  font-style: italic;
-  margin-top: 10px;
+  background: linear-gradient(135deg, #fff3e0, #fce4ec);
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  padding: 20px;
   text-align: center;
+  color: #e65100;
+  max-width: 500px;
+}
+
+.observer-notice p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.observer-notice p:first-child {
+  font-weight: 600;
+  font-size: 15px;
 }
 
 /* Responsive design */
@@ -457,6 +589,12 @@ textarea:disabled {
   
   .location-details {
     font-size: 16px;
+  }
+
+  .observer-warning,
+  .observer-notice {
+    font-size: 14px;
+    padding: 15px;
   }
 }
 </style>

@@ -26,7 +26,7 @@
           </div>
           <div class="stat-card">
             <h3>Total Items Needed</h3>
-            <p class="stat-number">{{ totalItemsNeeded }}</p>
+            <p class="stat-number"> {{ totalCombinedQuantity }}</p>
           </div>
           <div class="stat-card">
             <h3>Urgent Requests</h3>

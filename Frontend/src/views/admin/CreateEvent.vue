@@ -4,10 +4,26 @@
       <h2 class="event-header">Create Disaster Event</h2>
       <p class="description">Please fill in the details below to register a new disaster event.</p>
       
+      <!-- Admin Observer Warning -->
+      <div v-if="isAdminObserver" class="observer-warning">
+        <strong>Admin Observer Mode:</strong> You can view this form but cannot create events. This is a read-only preview of the event creation process.
+      </div>
+      
       <form @submit.prevent="submitEvent">
-        <input v-model="event.name" placeholder="Event Name (e.g., Earthquake Relief)" required />
+        <input 
+          v-model="event.name" 
+          placeholder="Event Name (e.g., Earthquake Relief)" 
+          required 
+          :disabled="isAdminObserver"
+          :class="{ 'disabled-field': isAdminObserver }"
+        />
         
-        <select v-model="event.type" required>
+        <select 
+          v-model="event.type" 
+          required
+          :disabled="isAdminObserver"
+          :class="{ 'disabled-field': isAdminObserver }"
+        >
           <option disabled value="">Select Disaster Type</option>
           <option>Hurricane</option>
           <option>Earthquake</option>
@@ -22,12 +38,30 @@
         <div class="location-section">
           <h3 class="section-title">Event Location</h3>
           
-          <input v-model="event.address" placeholder="Street Address (e.g., 123 Main St)" required />
+          <input 
+            v-model="event.address" 
+            placeholder="Street Address (e.g., 123 Main St)" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          />
           
-          <input v-model="event.city" placeholder="City (e.g., Los Angeles)" required />
+          <input 
+            v-model="event.city" 
+            placeholder="City (e.g., Los Angeles)" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          />
           
           <div class="form-row">
-            <select v-model="event.state" required class="state-select">
+            <select 
+              v-model="event.state" 
+              required 
+              class="state-select"
+              :disabled="isAdminObserver"
+              :class="{ 'disabled-field': isAdminObserver }"
+            >
               <option disabled value="">Select State</option>
               <option v-for="state in stateOptions" :key="state.value" :value="state.value">
                 {{ state.label }}
@@ -40,23 +74,42 @@
               pattern="[0-9]{5}(-[0-9]{4})?" 
               title="Please enter a valid ZIP code (e.g., 12345 or 12345-6789)"
               required 
+              :disabled="isAdminObserver"
+              :class="{ 'disabled-field': isAdminObserver }"
             />
           </div>
         </div>
         
         <div class="form-group">
           <label class="field-label">Start Date:</label>
-          <input type="date" v-model="event.startDate" required />
+          <input 
+            type="date" 
+            v-model="event.startDate" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          />
         </div>
 
         <div class="form-group">
           <label class="field-label">End Date:</label>
-          <input type="date" v-model="event.endDate" required />
+          <input 
+            type="date" 
+            v-model="event.endDate" 
+            required 
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          />
         </div>
 
         <div class="form-group">
           <label class="field-label">Select Categories:</label>
-          <select v-model="event.categoryIds" multiple>
+          <select 
+            v-model="event.categoryIds" 
+            multiple
+            :disabled="isAdminObserver"
+            :class="{ 'disabled-field': isAdminObserver }"
+          >
             <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
               {{ cat.category_name }}
             </option>
@@ -65,12 +118,24 @@
         </div>
 
         <div class="auth-actions">
-          <AppButton type="submit" variant="primary":disabled="isAdminObserver">Create Event</AppButton>
+          <AppButton 
+            type="submit" 
+            variant="primary"
+            :disabled="isAdminObserver || !canManageEvents"
+            :class="{ 'disabled-button': isAdminObserver }"
+          >
+            {{ isAdminObserver ? 'View Only Mode - Cannot Create' : 'Create Event' }}
+          </AppButton>
+          
+          <div v-if="isAdminObserver" class="observer-notice">
+            <p>Admin Observers can view all forms but cannot create events or modify existing data.</p>
+          </div>
         </div>
       </form>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
@@ -159,8 +224,8 @@ const fetchCategories = async () => {
 }
 
 const submitEvent = async () => {
-  if (isAdminObserver.value) {
-    alert('Admin Observers cannot create events.');
+  if (isAdminObserver.value || !canManageEvents.value) {
+    alert('Admin Observers cannot create events. This is a view-only mode.');
     return;
   }
   
@@ -240,6 +305,19 @@ onMounted(fetchCategories)
   text-align: left; 
 }
 
+/* Observer warning styling */
+.observer-warning {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  color: #1565c0;
+  text-align: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
+}
+
 form {
   display: flex;
   flex-direction: column;
@@ -290,6 +368,18 @@ select {
   font-size: 16px;
   background-color: white;
   width: 100%;
+  transition: all 0.3s ease;
+}
+
+/* Disabled field styling */
+.disabled-field,
+input:disabled, 
+select:disabled {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  border-color: #dee2e6 !important;
 }
 
 .field-label {
@@ -311,7 +401,37 @@ select {
   margin-top: 30px;
   margin-bottom: 20px;
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.disabled-button {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background-color: #cccccc !important;
+  color: #666666 !important;
+}
+
+.disabled-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.observer-notice {
+  background: linear-gradient(135deg, #fff3e0, #fce4ec);
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  color: #e65100;
+  max-width: 500px;
+}
+
+.observer-notice p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* Responsive design */
@@ -323,6 +443,25 @@ select {
   .form-row .state-select,
   .form-row input {
     flex: none;
+  }
+
+  .event-container {
+    padding: 30px 15px;
+  }
+
+  .content-box {
+    padding: 25px;
+  }
+
+  .event-header {
+    font-size: 24px;
+    padding: 12px 25px;
+  }
+
+  .observer-warning,
+  .observer-notice {
+    font-size: 14px;
+    padding: 15px;
   }
 }
 </style>
