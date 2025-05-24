@@ -51,30 +51,30 @@ const routes = [
     meta: { requiresAuth: false }
   },
   
-  // Admin routes
+  // Admin routes - UPDATED to include Admin Observer for view-only access
   {
     path: '/admin',
     name: 'admin',
     component: AdminDashboard,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Allow both Admin and Admin Observer
   },
   {
     path: '/admin/create-event',
     name: 'create-event',
     component: CreateEvent,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin'] } // Only full Admin can create
   },
   {
     path: '/admin/manage-items',
     name: 'manage-items',
     component: ManageItems,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin'] } // Only full Admin can manage
   },
   {
     path: '/admin/view-events',
     name: 'view-events',
     component: ViewEvents,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Both can view
   },
   
   // Donor routes
@@ -88,13 +88,13 @@ const routes = [
     path: '/pledge-view',
     name: 'pledges',
     component: PledgeView,
-    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin', 'Admin Observer'] } // Admin Observer can view
   },
   {
     path: '/create-pledge',
     name: 'create-pledge',
     component: CreatePledgeForm,
-    meta: { requiresAuth: true, roles: ['Donor'] }
+    meta: { requiresAuth: true, roles: ['Donor'] } // Admin Observer cannot create
   },
   
   // Recipient routes
@@ -108,51 +108,51 @@ const routes = [
     path: '/request-view',
     name: 'requests',
     component: RequestView,
-    meta: { requiresAuth: true, roles: ['Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Recipient', 'Admin', 'Admin Observer'] } // Admin Observer can view
   },
   
-  // Shared routes (roles managed at the component level)
+  // Shared routes - UPDATED for Admin Observer permissions
   {
     path: '/create-request',
     name: 'create-request',
     component: CreateRequest,
-    meta: { requiresAuth: true, roles: ['Recipient', 'Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Recipient', 'Donor', 'Admin'] } // Admin Observer cannot create
   },
   {
     path: '/respond-to-requests',
     name: 'respond-to-requests',
     component: RespondToRequests,
-    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin', 'Admin Observer'] } // Admin Observer can view requests
   },
   {
     path: '/respond/:id',
     name: 'respond-page',
     component: RespondPage,
-    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] } // Admin Observer cannot respond
   },
   {
     path: '/match-view',
     name: 'matches',
     component: MatchView,
-    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin', 'Admin Observer'] } // Admin Observer can view
   },
   {
     path: '/shipping/:id',
     name: 'shipping',
     component: ShippingInfo,
-    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin', 'Admin Observer'] } // Admin Observer can view
   },
   {
     path: '/create-match/:id',
     name: 'create-match',
     component: ManualMatchForm,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin'] } // Only full Admin can create matches
   },
   {
     path: '/auto-match/:id',
     name: 'auto-match',
     component: AutoMatch,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin'] } // Only full Admin can auto-match
   },
   
   // Catch-all route (404)
@@ -172,7 +172,7 @@ const router = createRouter({
   }
 });
 
-// Navigation guard
+// Navigation guard - UPDATED to handle Admin Observer routing
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   authStore.loadUserDataFromCookie();
@@ -188,8 +188,8 @@ router.beforeEach((to, from, next) => {
     // Check if user has required role for the route
     if (to.meta.roles && !to.meta.roles.includes(authStore.role)) {
       // Redirect to appropriate dashboard if user doesn't have required role
-      if (authStore.isAdmin) {
-        next({ name: 'admin' });
+      if (authStore.isAdmin || authStore.isAdminObserver) {
+        next({ name: 'admin' }); // Both Admin and Admin Observer go to admin dashboard
       } else if (authStore.isDonor) {
         next({ name: 'donor' });
       } else if (authStore.isRecipient) {
@@ -202,8 +202,8 @@ router.beforeEach((to, from, next) => {
   } else if (authStore.isAuthenticated) {
     // Redirect to appropriate dashboard if already logged in and trying to access auth pages
     if (to.name === 'login' || to.name === 'register' || to.name === 'reset-password') {
-      if (authStore.isAdmin) {
-        next({ name: 'admin' });
+      if (authStore.isAdmin || authStore.isAdminObserver) {
+        next({ name: 'admin' }); // Both go to admin dashboard
       } else if (authStore.isDonor) {
         next({ name: 'donor' });
       } else if (authStore.isRecipient) {
