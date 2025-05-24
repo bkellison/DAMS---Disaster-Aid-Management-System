@@ -296,7 +296,7 @@ const handleSubmit = async () => {
       showAlert({
         type: 'success',
         title: 'Registration Successful',
-        message: 'Your account request has been submitted. Please wait for approval before logging in.',
+        message: 'Your account request has been submitted and approved',
         duration: 5000
       });
       

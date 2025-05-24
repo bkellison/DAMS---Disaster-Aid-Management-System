@@ -29,12 +29,11 @@ def request_new_account():
         city = data_payload.get("city")
         state = data_payload.get("state")
         zip_code = data_payload.get("zipcode")
-        approved_flag = 0
-
+        approved_flag = 1  # CHANGED: Auto-approve new users
 
         #Verify valid inputs
         if not requested_username or not requested_password or not requested_role:
-            return jsonify({"error": "Missing requird fields"}), 400
+            return jsonify({"error": "Missing required fields"}), 400
       
         #Check if username exists
         existing_username_query = "SELECT * FROM user WHERE username = :username"
@@ -51,7 +50,7 @@ def request_new_account():
         db.session.execute((text(new_user_query)), ({"username": requested_username, "hashed_password": hashed_password, "role": requested_role, "email": email, "zip_code": zip_code, "approved_flag": approved_flag, "address_line1": address_line1, "address_line2": address_line2, "city": city, "state": state}))
         db.session.commit() #Save to db
 
-        return jsonify({"message": "User request created successfully"}), 201
+        return jsonify({"message": "User account created successfully and approved"}), 201
     except SQLAlchemyError as ex:
         db.session.rollback()
         # Handle database errors
