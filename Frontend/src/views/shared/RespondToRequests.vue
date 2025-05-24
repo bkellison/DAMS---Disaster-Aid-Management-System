@@ -26,7 +26,7 @@
           </div>
           <div class="stat-card">
             <h3>Total Items Needed</h3>
-            <p class="stat-number"> {{ totalCombinedQuantity }}</p>
+            <p class="stat-number">{{ totalItemsNeeded }}</p>  <!-- Changed from totalCombinedQuantity -->
           </div>
           <div class="stat-card">
             <h3>Urgent Requests</h3>
@@ -182,7 +182,9 @@ const sortBy = ref('newest');
 
 // Computed properties for stats and filtering
 const totalItemsNeeded = computed(() => {
-  return requests.value.reduce((sum, request) => sum + request.request_quantity_remaining, 0);
+  return requests.value.reduce((sum, request) => {
+    return sum + Number(request.request_quantity_remaining || 0);
+  }, 0);
 });
 
 const urgentRequests = computed(() => {
