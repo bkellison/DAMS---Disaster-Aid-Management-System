@@ -26,7 +26,7 @@
           </div>
           <div class="stat-card">
             <h3>Total Items Needed</h3>
-            <p class="stat-number">{{ totalItemsNeeded }}</p>  <!-- Changed from totalCombinedQuantity -->
+            <p class="stat-number">{{ totalItemsNeeded }}</p>
           </div>
           <div class="stat-card">
             <h3>Urgent Requests</h3>
@@ -126,6 +126,7 @@
             </div>
 
             <div class="button-group">
+              <!-- Donor buttons -->
               <AppButton 
                 v-if="authStore.role === 'Donor'" 
                 variant="primary" 
@@ -134,20 +135,23 @@
                 {{ request.request_quantity_remaining <= 0 ? 'Fully Pledged' : 'Create Pledge' }}
               </AppButton>
               
+              <!-- Admin and Admin Observer buttons -->
               <AppButton 
-                v-if="authStore.role === 'Admin'" 
+                v-if="authStore.role === 'Admin' || authStore.role === 'Admin Observer'" 
                 variant="primary" 
                 @click="goToMatchForm(request.request_id)"
-                :disabled="request.request_quantity_remaining <= 0">
-                Manual Match
+                :disabled="request.request_quantity_remaining <= 0 || authStore.role === 'Admin Observer'"
+                :title="authStore.role === 'Admin Observer' ? 'Admin Observers can view but not create matches' : ''">
+                {{ authStore.role === 'Admin Observer' ? 'View Manual Match' : 'Manual Match' }}
               </AppButton>
               
               <AppButton 
-                v-if="authStore.role === 'Admin'" 
+                v-if="authStore.role === 'Admin' || authStore.role === 'Admin Observer'" 
                 variant="secondary" 
                 @click="goToAutoMatch(request.request_id)"
-                :disabled="request.request_quantity_remaining <= 0">
-                Auto Match
+                :disabled="request.request_quantity_remaining <= 0 || authStore.role === 'Admin Observer'"
+                :title="authStore.role === 'Admin Observer' ? 'Admin Observers can view but not create matches' : ''">
+                {{ authStore.role === 'Admin Observer' ? 'View Auto Match' : 'Auto Match' }}
               </AppButton>
 
               <AppButton 

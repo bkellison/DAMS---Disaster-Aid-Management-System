@@ -6,7 +6,7 @@
 
       <!-- Admin Observer Warning -->
       <div v-if="isAdminObserver" class="observer-warning">
-        <strong>👁️ Admin Observer Mode:</strong> You can view all events but cannot edit or delete them. This is a read-only view of the event management system.
+        <strong>Admin Observer Mode:</strong> You can view all events but cannot edit or delete them. This is a read-only view of the event management system.
       </div>
 
       <div v-if="events.length === 0" class="no-events">No events found.</div>
@@ -46,7 +46,7 @@
       </ul>
 
       <div v-if="isAdminObserver" class="observer-notice">
-        <p>🔒 Admin Observers can view all events and their details but cannot modify or delete them.</p>
+        <p>Admin Observers can view all events and their details but cannot modify or delete them.</p>
         <p>This ensures you can monitor the system without accidentally making changes to event data.</p>
       </div>
     </div>
