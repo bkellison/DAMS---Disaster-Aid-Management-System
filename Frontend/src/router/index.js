@@ -51,7 +51,7 @@ const routes = [
     meta: { requiresAuth: false }
   },
   
-  // Admin routes
+  // Admin routes - UPDATED for Admin Observer complete access
   {
     path: '/admin',
     name: 'admin',
@@ -62,13 +62,13 @@ const routes = [
     path: '/admin/create-event',
     name: 'create-event',
     component: CreateEvent,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Admin Observer can VIEW the form
   },
   {
     path: '/admin/manage-items',
     name: 'manage-items',
     component: ManageItems,
-    meta: { requiresAuth: true, roles: ['Admin'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Admin Observer can VIEW items
   },
   {
     path: '/admin/view-events',
@@ -77,7 +77,7 @@ const routes = [
     meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] }
   },
   
-  // Donor routes
+  // Donor routes - Admin Observer can view but not create
   {
     path: '/donor',
     name: 'donor',
@@ -88,16 +88,16 @@ const routes = [
     path: '/pledge-view',
     name: 'pledges',
     component: PledgeView,
-    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin', 'Admin Observer'] }
   },
   {
     path: '/create-pledge',
     name: 'create-pledge',
     component: CreatePledgeForm,
-    meta: { requiresAuth: true, roles: ['Donor'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin', 'Admin Observer'] } // Admin Observer can VIEW form
   },
   
-  // Recipient routes
+  // Recipient routes - Admin Observer can view
   {
     path: '/recipient',
     name: 'recipient',
@@ -108,15 +108,15 @@ const routes = [
     path: '/request-view',
     name: 'requests',
     component: RequestView,
-    meta: { requiresAuth: true, roles: ['Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Recipient', 'Admin', 'Admin Observer'] }
   },
   
-  // Shared routes (roles managed at the component level)
+  // Shared routes - Admin Observer gets view access to all
   {
     path: '/create-request',
     name: 'create-request',
     component: CreateRequest,
-    meta: { requiresAuth: true, roles: ['Recipient', 'Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Recipient', 'Donor', 'Admin', 'Admin Observer'] } // Can VIEW form
   },
   {
     path: '/respond-to-requests',
@@ -128,31 +128,31 @@ const routes = [
     path: '/respond/:id',
     name: 'respond-page',
     component: RespondPage,
-    meta: { requiresAuth: true, roles: ['Donor', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Admin', 'Admin Observer'] } // Can VIEW but not submit
   },
   {
     path: '/match-view',
     name: 'matches',
     component: MatchView,
-    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin', 'Admin Observer'] }
   },
   {
     path: '/shipping/:id',
     name: 'shipping',
     component: ShippingInfo,
-    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin'] }
+    meta: { requiresAuth: true, roles: ['Donor', 'Recipient', 'Admin', 'Admin Observer'] }
   },
   {
     path: '/create-match/:id',
     name: 'create-match',
     component: ManualMatchForm,
-    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Can VIEW matching interface
   },
   {
     path: '/auto-match/:id',
     name: 'auto-match',
     component: AutoMatch,
-    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] }
+    meta: { requiresAuth: true, roles: ['Admin', 'Admin Observer'] } // Can VIEW auto-match interface
   },
   
   // Catch-all route (404)
@@ -167,26 +167,34 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    // Scroll to top on navigation
     return savedPosition || { top: 0 };
   }
 });
 
-// Navigation guard
+// Navigation guard - UPDATED to properly handle Admin Observer routing
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   authStore.loadUserDataFromCookie();
+  
+  console.log('Router guard - Current user:', {
+    isAuthenticated: authStore.isAuthenticated,
+    role: authStore.role,
+    isAdmin: authStore.isAdmin,
+    isAdminObserver: authStore.isAdminObserver
+  });
   
   // Check if the route requires authentication
   if (to.meta.requiresAuth) {
     // If not authenticated, redirect to login
     if (!authStore.isAuthenticated) {
+      console.log('Not authenticated, redirecting to login');
       next({ name: 'login' });
       return;
     }
     
     // Check if user has required role for the route
     if (to.meta.roles && !to.meta.roles.includes(authStore.role)) {
+      console.log('User role not allowed for route:', authStore.role, 'Required:', to.meta.roles);
       // Redirect to appropriate dashboard if user doesn't have required role
       if (authStore.isAdmin || authStore.isAdminObserver) {
         next({ name: 'admin' });
@@ -202,8 +210,9 @@ router.beforeEach((to, from, next) => {
   } else if (authStore.isAuthenticated) {
     // Redirect to appropriate dashboard if already logged in and trying to access auth pages
     if (to.name === 'login' || to.name === 'register' || to.name === 'reset-password') {
+      console.log('Already authenticated, redirecting to dashboard');
       if (authStore.isAdmin || authStore.isAdminObserver) {
-        next({ name: 'admin' });
+        next({ name: 'admin' }); // Both Admin and Admin Observer go to admin dashboard
       } else if (authStore.isDonor) {
         next({ name: 'donor' });
       } else if (authStore.isRecipient) {
@@ -215,6 +224,7 @@ router.beforeEach((to, from, next) => {
     }
   }
   
+  console.log('Route allowed, proceeding to:', to.name);
   // All good, proceed to the route
   next();
 });
