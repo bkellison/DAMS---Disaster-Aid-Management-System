@@ -133,7 +133,7 @@ const { isLoading, showLoading, hideLoading } = useLoading();
 const roleOptions = [
   { value: 'Recipient', label: 'Recipient' },
   { value: 'Donor', label: 'Donor' },
-  { value: 'Admin', label: 'Admin' },
+  // { value: 'Admin', label: 'Admin' }, // Commented out - Admin accounts must be created by existing admins
   { value: 'Admin Observer', label: 'Admin Observer' }
 ];
 
