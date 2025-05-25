@@ -142,7 +142,7 @@
                   </div>
                   <div class="pledge-status">
                     <span class="contribution-indicator">
-                      You've contributed to this request
+                      🤝 You've contributed to this request
                     </span>
                   </div>
                 </div>
@@ -335,15 +335,26 @@ const viewRequestDetails = (request) => {
 const fetchRequests = async () => {
   loading.value = true;
   try {
+    console.log('Fetching requests...');
     const response = await api.get('/getRequestsForResponse');
+    console.log('Requests response:', response.data);
     
     // Enhanced: Fetch inventory data and user pledges for each request
     const requestsWithInventory = await Promise.all(
       response.data.map(async (request) => {
+        // Initialize default values
+        request.available_inventory = 0;
+        request.inventory_breakdown = { admin: 0, pledges: 0 };
+        request.your_pledged_quantity = 0;
+        request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
+
         // Get available inventory for this specific item
         if (request.item_name) {
           try {
+            console.log('Fetching inventory for item:', request.item_name);
             const inventoryResponse = await api.get('/getItemAvailability');
+            console.log('Inventory response:', inventoryResponse.data);
+            
             const itemInventory = inventoryResponse.data.find(
               item => item.name === request.item_name
             );
@@ -354,24 +365,20 @@ const fetchRequests = async () => {
                 admin: itemInventory.base_quantity || 0,
                 pledges: itemInventory.available_pledged || 0
               };
-            } else {
-              request.available_inventory = 0;
-              request.inventory_breakdown = { admin: 0, pledges: 0 };
+              console.log('Found inventory for', request.item_name, ':', request.available_inventory);
             }
           } catch (error) {
             console.error('Error fetching inventory for item:', request.item_name, error);
-            request.available_inventory = 0;
-            request.inventory_breakdown = { admin: 0, pledges: 0 };
+            // Keep default values on error
           }
-        } else {
-          request.available_inventory = 0;
-          request.inventory_breakdown = { admin: 0, pledges: 0 };
         }
 
         // Enhanced: Get user's pledges for this specific item
-        try {
-          if (authStore.userId && request.item_name) {
+        if (authStore.userId && request.item_name) {
+          try {
+            console.log('Fetching pledges for user:', authStore.userId);
             const pledgesResponse = await api.get(`/getPledges?user_id=${authStore.userId}`);
+            console.log('Pledges response:', pledgesResponse.data);
             
             // Find pledges for this specific item
             const userPledgesForItem = pledgesResponse.data.filter(
@@ -379,11 +386,13 @@ const fetchRequests = async () => {
             );
             
             if (userPledgesForItem.length > 0) {
+              console.log('Found user pledges for', request.item_name, ':', userPledgesForItem);
+              
               // Calculate totals across all pledges for this item
-              const totalPledged = userPledgesForItem.reduce((sum, pledge) => sum + pledge.item_quantity, 0);
-              const totalAllocated = userPledgesForItem.reduce((sum, pledge) => sum + pledge.allocated_quantity, 0);
-              const totalFulfilled = userPledgesForItem.reduce((sum, pledge) => sum + pledge.fulfilled_quantity, 0);
-              const totalAvailable = userPledgesForItem.reduce((sum, pledge) => sum + pledge.items_left, 0);
+              const totalPledged = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.item_quantity || 0), 0);
+              const totalAllocated = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.allocated_quantity || 0), 0);
+              const totalFulfilled = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.fulfilled_quantity || 0), 0);
+              const totalAvailable = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.items_left || 0), 0);
               
               request.your_pledged_quantity = totalPledged;
               request.your_pledge_breakdown = {
@@ -391,18 +400,11 @@ const fetchRequests = async () => {
                 fulfilled: totalFulfilled,
                 available: totalAvailable
               };
-            } else {
-              request.your_pledged_quantity = 0;
-              request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
             }
-          } else {
-            request.your_pledged_quantity = 0;
-            request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
+          } catch (error) {
+            console.error('Error fetching user pledges for item:', request.item_name, error);
+            // Keep default values on error
           }
-        } catch (error) {
-          console.error('Error fetching user pledges for item:', request.item_name, error);
-          request.your_pledged_quantity = 0;
-          request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
         }
         
         return request;
@@ -410,9 +412,17 @@ const fetchRequests = async () => {
     );
     
     requests.value = requestsWithInventory;
+    console.log('Final requests with inventory:', requests.value);
   } catch (error) {
     console.error('Error fetching requests:', error);
-    alert('Failed to load requests. Please try again.');
+    
+    // Check if it's a 404 error and provide more specific feedback
+    if (error.response && error.response.status === 404) {
+      console.error('404 Error - API endpoint not found:', error.config.url);
+      alert('API endpoint not found. Please check if the server is running and the endpoint exists.');
+    } else {
+      alert('Failed to load requests. Please try again.');
+    }
   } finally {
     loading.value = false;
   }
