@@ -233,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
@@ -253,8 +253,8 @@ const itemsPerPage = 10;
 
 // Computed properties
 const totalRequests = computed(() => requests.value.length);
-const totalItemsNeeded = computed(() =>
-  requests.value.reduce((sum, req) => sum + Number(req.request_quantity_remaining || 0), 0)
+const totalItemsNeeded = computed(() => 
+  requests.value.reduce((sum, req) => sum + req.request_quantity_remaining, 0)
 );
 const urgentRequests = computed(() => 
   requests.value.filter(req => req.request_quantity_remaining === req.quantity).length
@@ -313,11 +313,53 @@ const getInventoryClass = (availableInventory) => {
 };
 
 const navigateToManualMatch = (requestId) => {
-  router.push(`/create-match/${requestId}`);
+  console.log('=== MANUAL MATCH NAVIGATION ===');
+  console.log('Request ID:', requestId);
+  console.log('Request ID type:', typeof requestId);
+  
+  if (!requestId) {
+    console.error('ERROR: Request ID is null or undefined');
+    alert('Error: Invalid request ID');
+    return;
+  }
+  
+  const id = String(requestId);
+  const targetPath = `/create-match/${id}`;
+  
+  console.log('Target path:', targetPath);
+  
+  try {
+    router.push(targetPath);
+    console.log('Navigation initiated successfully');
+  } catch (error) {
+    console.error('Navigation error:', error);
+    alert('Navigation failed: ' + error.message);
+  }
 };
 
 const navigateToAutoMatch = (requestId) => {
-  router.push(`/auto-match/${requestId}`);
+  console.log('=== AUTO MATCH NAVIGATION ===');
+  console.log('Request ID:', requestId);
+  console.log('Request ID type:', typeof requestId);
+  
+  if (!requestId) {
+    console.error('ERROR: Request ID is null or undefined');
+    alert('Error: Invalid request ID');
+    return;
+  }
+  
+  const id = String(requestId);
+  const targetPath = `/auto-match/${id}`;
+  
+  console.log('Target path:', targetPath);
+  
+  try {
+    router.push(targetPath);
+    console.log('Navigation initiated successfully');
+  } catch (error) {
+    console.error('Navigation error:', error);
+    alert('Navigation failed: ' + error.message);
+  }
 };
 
 const viewRequestDetails = (request) => {
@@ -328,13 +370,18 @@ const viewRequestDetails = (request) => {
 const fetchRequests = async () => {
   loading.value = true;
   try {
-    console.log('Fetching requests...');
+    console.log('=== FETCHING REQUESTS START ===');
+    console.log('Making API request to /getRequestsForResponse');
+    
     const response = await api.get('/getRequestsForResponse');
-    console.log('Requests response:', response.data);
+    console.log('SUCCESS /getRequestsForResponse - Status:', response.status);
+    console.log('Response data:', response.data);
     
     // Enhanced: Fetch inventory data and user pledges for each request
     const requestsWithInventory = await Promise.all(
-      response.data.map(async (request) => {
+      response.data.map(async (request, index) => {
+        console.log(`Processing request ${index + 1}/${response.data.length}:`, request.request_id);
+        
         // Initialize default values
         request.available_inventory = 0;
         request.inventory_breakdown = { admin: 0, pledges: 0 };
@@ -344,9 +391,11 @@ const fetchRequests = async () => {
         // Get available inventory for this specific item
         if (request.item_name) {
           try {
-            console.log('Fetching inventory for item:', request.item_name);
+            console.log(`Fetching inventory for item: ${request.item_name}`);
+            
             const inventoryResponse = await api.get('/getItemAvailability');
-            console.log('Inventory response received, items count:', inventoryResponse.data.length);
+            console.log('SUCCESS /getItemAvailability - Status:', inventoryResponse.status);
+            console.log(`Inventory items count: ${inventoryResponse.data.length}`);
             
             const itemInventory = inventoryResponse.data.find(
               item => item.name === request.item_name
@@ -358,22 +407,34 @@ const fetchRequests = async () => {
                 admin: itemInventory.base_quantity || 0,
                 pledges: itemInventory.available_pledged || 0
               };
-              console.log('Found inventory for', request.item_name, ':', request.available_inventory);
+              console.log(`Found inventory for ${request.item_name}:`, request.available_inventory);
             } else {
-              console.log('No inventory found for item:', request.item_name);
+              console.log(`No inventory found for item: ${request.item_name}`);
             }
           } catch (error) {
-            console.error('Error fetching inventory for item:', request.item_name, error);
-            // Keep default values on error
+            console.error(`ERROR fetching inventory for item ${request.item_name}:`, error);
+            console.error('Error details:', {
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              url: error.config?.url,
+              data: error.response?.data
+            });
+            
+            // This might be the 404 error!
+            if (error.response?.status === 404) {
+              console.error('FOUND 404 ERROR - /getItemAvailability endpoint missing!');
+            }
           }
         }
 
         // Enhanced: Get user's pledges for this specific item
         if (authStore.userId && request.item_name) {
           try {
-            console.log('Fetching pledges for user:', authStore.userId, 'item:', request.item_name);
+            console.log(`Fetching pledges for user: ${authStore.userId}, item: ${request.item_name}`);
+            
             const pledgesResponse = await api.get(`/getPledges?user_id=${authStore.userId}`);
-            console.log('Pledges response received, pledges count:', pledgesResponse.data.length);
+            console.log('SUCCESS /getPledges - Status:', pledgesResponse.status);
+            console.log(`Pledges count: ${pledgesResponse.data.length}`);
             
             // Find pledges for this specific item
             const userPledgesForItem = pledgesResponse.data.filter(
@@ -381,7 +442,7 @@ const fetchRequests = async () => {
             );
             
             if (userPledgesForItem.length > 0) {
-              console.log('Found user pledges for', request.item_name, ':', userPledgesForItem);
+              console.log(`Found user pledges for ${request.item_name}:`, userPledgesForItem.length);
               
               // Calculate totals across all pledges for this item
               const totalPledged = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.item_quantity || 0), 0);
@@ -397,24 +458,44 @@ const fetchRequests = async () => {
               };
             }
           } catch (error) {
-            console.error('Error fetching user pledges for item:', request.item_name, error);
-            // Keep default values on error
+            console.error(`ERROR fetching user pledges for item ${request.item_name}:`, error);
+            console.error('Error details:', {
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              url: error.config?.url,
+              data: error.response?.data
+            });
+            
+            // This might be another 404 error!
+            if (error.response?.status === 404) {
+              console.error('FOUND 404 ERROR - /getPledges endpoint issue!');
+            }
           }
         }
         
+        console.log(`Completed processing request ${request.request_id}`);
         return request;
       })
     );
     
     requests.value = requestsWithInventory;
-    console.log('Final requests with inventory and pledges:', requests.value);
-  } catch (error) {
-    console.error('Error fetching requests:', error);
+    console.log('Final requests with inventory and pledges:', requests.value.length);
+    console.log('=== FETCHING REQUESTS COMPLETE ===');
     
-    // Check if it's a 404 error and provide more specific feedback
+  } catch (error) {
+    console.error('MAIN ERROR in fetchRequests:', error);
+    console.error('Error details:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      data: error.response?.data
+    });
+    
+    // Check if it's a 404 error on the main endpoint
     if (error.response && error.response.status === 404) {
-      console.error('404 Error - API endpoint not found:', error.config?.url || 'Unknown URL');
-      alert(`API endpoint not found: ${error.config?.url || 'Unknown endpoint'}. Please check if the server is running.`);
+      console.error('MAIN 404 ERROR - /getRequestsForResponse endpoint not found!');
+      alert(`API endpoint not found: ${error.config?.url || '/getRequestsForResponse'}. Please check if the server is running and the endpoint exists.`);
     } else {
       alert('Failed to load requests. Please try again.');
     }
@@ -425,10 +506,27 @@ const fetchRequests = async () => {
 
 const fetchCategories = async () => {
   try {
+    console.log('=== FETCHING CATEGORIES START ===');
+    console.log('Making API request to /getCategories');
+    
     const response = await api.get('/getCategories');
+    console.log('SUCCESS /getCategories - Status:', response.status);
+    console.log('Categories data:', response.data);
+    
     categories.value = response.data;
+    console.log('=== FETCHING CATEGORIES COMPLETE ===');
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('ERROR fetching categories:', error);
+    console.error('Error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      data: error.response?.data
+    });
+    
+    if (error.response?.status === 404) {
+      console.error('FOUND 404 ERROR - /getCategories endpoint missing!');
+    }
   }
 };
 
@@ -445,6 +543,69 @@ const sortRequests = () => {
   currentPage.value = 1; // Reset to first page when sorting
 };
 
+// Add network monitoring
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  console.log('Fetch request:', args[0]);
+  return originalFetch.apply(this, arguments)
+    .then(response => {
+      if (!response.ok) {
+        console.error(`Fetch failed: ${response.status} ${response.statusText} for ${args[0]}`);
+      } else {
+        console.log(`Fetch success: ${response.status} for ${args[0]}`);
+      }
+      return response;
+    })
+    .catch(error => {
+      console.error(`Fetch error for ${args[0]}:`, error);
+      throw error;
+    });
+};
+
+// Monitor Axios requests
+import axios from 'axios';
+
+// Add request interceptor
+const requestInterceptor = axios.interceptors.request.use(
+  config => {
+    console.log(`Axios request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log('Request config:', {
+      baseURL: config.baseURL,
+      url: config.url,
+      method: config.method,
+      params: config.params
+    });
+    return config;
+  },
+  error => {
+    console.error('Axios request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+const responseInterceptor = axios.interceptors.response.use(
+  response => {
+    console.log(`Axios response: ${response.status} for ${response.config.url}`);
+    return response;
+  },
+  error => {
+    console.error(`Axios response error: ${error.response?.status || 'Network Error'} for ${error.config?.url}`);
+    console.error('Full error:', error);
+    
+    if (error.response?.status === 404) {
+      console.error('404 ERROR DETAILS:');
+      console.error('URL:', error.config?.url);
+      console.error('Base URL:', error.config?.baseURL);
+      console.error('Full URL:', error.config?.baseURL + error.config?.url);
+      console.error('Method:', error.config?.method);
+      console.error('Headers:', error.config?.headers);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Watchers
 watch(() => filteredRequests.value.length, () => {
   if (currentPage.value > totalPages.value) {
@@ -454,8 +615,19 @@ watch(() => filteredRequests.value.length, () => {
 
 // Lifecycle
 onMounted(() => {
+  console.log('RespondToRequests component mounted');
+  console.log('Auth store user ID:', authStore.userId);
+  console.log('Auth store role:', authStore.role);
+  
   fetchRequests();
   fetchCategories();
+});
+
+// Clean up interceptors when component unmounts
+onUnmounted(() => {
+  axios.interceptors.request.eject(requestInterceptor);
+  axios.interceptors.response.eject(responseInterceptor);
+  window.fetch = originalFetch; // Restore original fetch
 });
 </script>
 
