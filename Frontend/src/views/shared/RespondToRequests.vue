@@ -97,7 +97,7 @@
                 <div class="inventory-details">
                   <div class="inventory-breakdown">
                     <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
-                      {{" ", request.available_inventory || 0 }} available
+                      {{request.available_inventory || 0 }} available
                     </span>
                     <div class="inventory-sources" v-if="request.inventory_breakdown">
                       <span class="admin-inventory" v-if="request.inventory_breakdown.admin > 0">
@@ -160,7 +160,7 @@
               
               <div class="info-row">
                 <span class="label">Preferred Matching:</span>
-                <span class="value"> {{ " ", request.preferred_match_type_name }}</span>
+                <span class="value"> {{request.preferred_match_type_name }}</span>
               </div>
               
               <div class="info-row" v-if="request.details">
@@ -516,7 +516,7 @@ onMounted(() => {
 
 .stat-card.urgent {
   border-color: #d3c0a3;
-  background: linear-gradient(135deg, #fff5f5, #ffebee);
+  background: linear-gradient(135deg,  #f9f3e8, #f5e9db);
 }
 
 .stat-number {
@@ -668,6 +668,7 @@ onMounted(() => {
   display: flex;
   margin-bottom: 12px;
   align-items: flex-start;
+   gap: 8px;
 }
 
 .info-row .label {
