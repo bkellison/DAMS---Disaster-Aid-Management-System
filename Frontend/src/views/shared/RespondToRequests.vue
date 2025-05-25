@@ -93,7 +93,7 @@
               
               <!-- ENHANCED: Available Inventory Display -->
               <div class="info-row inventory-info" v-if="request.item_name">
-                <span class="label">Available Inventory:</span>
+                <span class="label">Available Inventory: </span>
                 <div class="inventory-details">
                   <div class="inventory-breakdown">
                     <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
@@ -122,12 +122,11 @@
 
               <!-- ENHANCED: Your Pledges Display -->
               <div class="info-row your-pledges-info" v-if="request.your_pledged_quantity > 0">
-                <span class="label">Your Pledges:</span>
+                <span class="label">Your Pledges: </span>
                 <div class="pledge-details">
                   <div class="pledge-summary">
                     <span class="pledge-total">
-                      {{ request.your_pledged_quantity }} items pledged by you
-                    </span>
+                      {{ request.your_pledged_quantity }} items pledged by you </span>
                     <div class="pledge-breakdown" v-if="request.your_pledge_breakdown">
                       <span class="allocated-items" v-if="request.your_pledge_breakdown.allocated > 0">
                         {{ request.your_pledge_breakdown.allocated }} allocated
@@ -142,7 +141,7 @@
                   </div>
                   <div class="pledge-status">
                     <span class="contribution-indicator">
-                      🤝 You've contributed to this request
+                      You've contributed to this request
                     </span>
                   </div>
                 </div>
@@ -159,7 +158,7 @@
               </div>
               
               <div class="info-row">
-                <span class="label">Preferred Matching:</span>
+                <span class="label">Preferred Matching: </span>
                 <span class="value">{{ request.preferred_match_type_name }}</span>
               </div>
               
@@ -188,23 +187,14 @@
               <AppButton 
                 @click="navigateToManualMatch(request.request_id)" 
                 variant="primary"
-                size="small"
-              >
+                size="small">
                 Manual Match
               </AppButton>
               <AppButton 
                 @click="navigateToAutoMatch(request.request_id)" 
                 variant="secondary"
-                size="small"
-              >
+                size="small">
                 Auto Match
-              </AppButton>
-              <AppButton 
-                @click="viewRequestDetails(request)" 
-                variant="outline"
-                size="small"
-              >
-                View Details
               </AppButton>
             </div>
           </div>
