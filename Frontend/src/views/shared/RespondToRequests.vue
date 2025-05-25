@@ -83,17 +83,17 @@
             <div class="request-info">
               <div class="info-row">
                 <span class="label">Requested by:</span>
-                <span class="value">{{ request.requested_by }}</span>
+                <span class="value"> {{ request.requested_by }}</span>
               </div>
               
               <div class="info-row" v-if="request.item_name">
                 <span class="label">Specific Item:</span>
-                <span class="value">{{ request.item_name }}</span>
+                <span class="value"> {{ request.item_name }}</span>
               </div>
               
               <!-- ENHANCED: Available Inventory Display -->
               <div class="info-row inventory-info" v-if="request.item_name">
-                <span class="label">Available Inventory: </span>
+                <span class="label">Available Inventory:</span>
                 <div class="inventory-details">
                   <div class="inventory-breakdown">
                     <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
@@ -122,11 +122,12 @@
 
               <!-- ENHANCED: Your Pledges Display -->
               <div class="info-row your-pledges-info" v-if="request.your_pledged_quantity > 0">
-                <span class="label">Your Pledges: </span>
+                <span class="label">Your Pledges:</span>
                 <div class="pledge-details">
                   <div class="pledge-summary">
                     <span class="pledge-total">
-                      {{ request.your_pledged_quantity }} items pledged by you </span>
+                      {{ request.your_pledged_quantity }} items pledged by you
+                    </span>
                     <div class="pledge-breakdown" v-if="request.your_pledge_breakdown">
                       <span class="allocated-items" v-if="request.your_pledge_breakdown.allocated > 0">
                         {{ request.your_pledge_breakdown.allocated }} allocated
@@ -141,7 +142,7 @@
                   </div>
                   <div class="pledge-status">
                     <span class="contribution-indicator">
-                      You've contributed to this request
+                      🤝 You've contributed to this request
                     </span>
                   </div>
                 </div>
@@ -149,22 +150,22 @@
 
               <div class="info-row">
                 <span class="label">Total Requested:</span>
-                <span class="value">{{ request.quantity }}</span>
+                <span class="value"> {{ request.quantity }}</span>
               </div>
               
               <div class="info-row">
                 <span class="label">Still Needed:</span>
-                <span class="value urgent">{{ request.request_quantity_remaining }}</span>
+                <span class="value urgent"> {{ request.request_quantity_remaining }}</span>
               </div>
               
               <div class="info-row">
-                <span class="label">Preferred Matching: </span>
-                <span class="value">{{ request.preferred_match_type_name }}</span>
+                <span class="label">Preferred Matching:</span>
+                <span class="value"> {{ request.preferred_match_type_name }}</span>
               </div>
               
               <div class="info-row" v-if="request.details">
                 <span class="label">Details:</span>
-                <span class="value">{{ request.details }}</span>
+                <span class="value"> {{ request.details }}</span>
               </div>
             </div>
 
@@ -187,13 +188,15 @@
               <AppButton 
                 @click="navigateToManualMatch(request.request_id)" 
                 variant="primary"
-                size="small">
+                size="small"
+              >
                 Manual Match
               </AppButton>
               <AppButton 
                 @click="navigateToAutoMatch(request.request_id)" 
                 variant="secondary"
-                size="small">
+                size="small"
+              >
                 Auto Match
               </AppButton>
             </div>
