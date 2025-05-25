@@ -214,50 +214,144 @@ const pledgeMatchQuantity = ref(1);
 
 // Select a pledge
 const selectPledge = (pledge) => {
+  console.log('=== SELECT PLEDGE CLICKED ===');
+  console.log('Pledge:', pledge);
+  console.log('Selected request:', selectedRequest.value);
+  
   selectedPledge.value = pledge;
-  // Set default match count to either all remaining in the request or all available in the pledge (whichever is smaller)
-  pledgeMatchQuantity.value = Math.min(
-    pledge.available_quantity, 
-    selectedRequest.value.request_quantity_remaining || 1
-  );
+  
+  // Set default match count
+  if (pledge && selectedRequest.value) {
+    pledgeMatchQuantity.value = Math.min(
+      pledge.available_quantity, 
+      selectedRequest.value.request_quantity_remaining || 1
+    );
+    console.log('Pledge match quantity set to:', pledgeMatchQuantity.value);
+  }
+  
+  console.log('Selected pledge set to:', selectedPledge.value);
+  console.log('=== SELECT PLEDGE END ===');
 };
+
+// Add error boundary to catch any Vue errors:
+import { onErrorCaptured } from 'vue';
+
+onErrorCaptured((error, instance, info) => {
+  console.error('=== VUE ERROR CAPTURED ===');
+  console.error('Error:', error);
+  console.error('Instance:', instance);
+  console.error('Info:', info);
+  console.error('Error stack:', error.stack);
+  console.error('=== END VUE ERROR ===');
+  
+  // Return false to propagate the error to the global error handler
+  return false;
+});
+
+// Also add window error handler to catch any uncaught errors:
+window.addEventListener('error', (event) => {
+  console.error('=== UNCAUGHT ERROR ===');
+  console.error('Error:', event.error);
+  console.error('Message:', event.message);
+  console.error('Filename:', event.filename);
+  console.error('Line:', event.lineno);
+  console.error('Column:', event.colno);
+  console.error('=== END UNCAUGHT ERROR ===');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('=== UNHANDLED PROMISE REJECTION ===');
+  console.error('Reason:', event.reason);
+  console.error('Promise:', event.promise);
+  console.error('=== END UNHANDLED REJECTION ===');
+});
 
 // Get specific request by ID
 async function getRequestDetails(requestId) {
+  console.log('=== GET REQUEST DETAILS START ===');
+  console.log('Request ID:', requestId);
+  
   try {
+    console.log('Making API call to get request details...');
     const response = await api.get(`/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
-    if(response.data.length > 0) {
+    console.log('Request details API response:', response);
+    console.log('Response data:', response.data);
+    console.log('Response data length:', response.data?.length);
+    
+    if (response.data && response.data.length > 0) {
       selectedRequest.value = response.data[0];
+      console.log('Selected request set to:', selectedRequest.value);
       
       // After getting request, fetch available matches
+      console.log('Starting to get match options...');
       await getMatchOptions(requestId);
+      console.log('Match options loaded:', matchOptions.value);
+    } else {
+      console.error('ERROR: No request data returned');
+      console.log('Full response:', response);
+      alert('Error: Request not found or no data returned');
     }
   } catch (error) {
-    console.error('Error getting request details:', error);
+    console.error('ERROR in getRequestDetails:', error);
+    console.error('Error response:', error.response);
+    if (error.response) {
+      console.error('Error status:', error.response.status);
+      console.error('Error data:', error.response.data);
+    }
+    throw error; // Re-throw to be caught by onMounted
   }
+  
+  console.log('=== GET REQUEST DETAILS END ===');
 }
 
 // Get combined match options (admin inventory + pledges)
 async function getMatchOptions(requestId) {
+  console.log('=== GET MATCH OPTIONS START ===');
+  console.log('Request ID:', requestId);
+  
   try {
+    console.log('Making API call to get combined match options...');
     const response = await api.get(`/getCombinedMatchOptions?request_id=${requestId}`);
-    matchOptions.value = response.data;
+    console.log('Match options API response:', response);
+    console.log('Match options data:', response.data);
     
-    // Default to admin tab if there's admin inventory, otherwise pledges
-    activeTab.value = matchOptions.value.base_quantity > 0 ? 'admin' : 'pledges';
-    
-    // Set initial quantities
-    adminMatchQuantity.value = Math.min(
-      matchOptions.value.base_quantity, 
-      selectedRequest.value.request_quantity_remaining
-    );
-    
-    // Clear selected pledge when fetching new match options
-    selectedPledge.value = null;
+    if (response.data) {
+      matchOptions.value = response.data;
+      console.log('Match options set to:', matchOptions.value);
+      
+      // Default to admin tab if there's admin inventory, otherwise pledges
+      const defaultTab = matchOptions.value.base_quantity > 0 ? 'admin' : 'pledges';
+      console.log('Setting default tab to:', defaultTab);
+      activeTab.value = defaultTab;
+      
+      // Set initial quantities
+      if (selectedRequest.value && selectedRequest.value.request_quantity_remaining) {
+        adminMatchQuantity.value = Math.min(
+          matchOptions.value.base_quantity || 0, 
+          selectedRequest.value.request_quantity_remaining
+        );
+        console.log('Admin match quantity set to:', adminMatchQuantity.value);
+      }
+      
+      // Clear selected pledge when fetching new match options
+      selectedPledge.value = null;
+      console.log('Selected pledge cleared');
+      
+    } else {
+      console.error('ERROR: No match options data returned');
+      console.log('Full response:', response);
+    }
   } catch (error) {
-    console.error('Error getting match options:', error);
+    console.error('ERROR in getMatchOptions:', error);
+    console.error('Error response:', error.response);
+    
+    if (error.response) {
+      console.error('Error status:', error.response.status);
+      console.error('Error data:', error.response.data);
+    }
     
     // Fallback with empty data if API call fails
+    console.log('Setting fallback match options...');
     matchOptions.value = {
       base_quantity: 0,
       total_from_pledges: 0,
@@ -265,17 +359,27 @@ async function getMatchOptions(requestId) {
       available_pledges: [],
       available_sources: []
     };
+    console.log('Fallback match options set:', matchOptions.value);
   }
+  
+  console.log('=== GET MATCH OPTIONS END ===');
 }
 
 // Create a match from admin inventory
-async function createAdminMatch(request) {
+const createAdminMatch = async (request) => {
+  console.log('=== CREATE ADMIN MATCH CLICKED ===');
+  console.log('Request:', request);
+  console.log('Admin match quantity:', adminMatchQuantity.value);
+  console.log('Is Admin Observer:', isAdminObserver.value);
+  
   if (isAdminObserver.value) {
+    console.log('Admin Observer - blocking action');
     alert('Admin Observers cannot create matches from admin inventory.');
     return;
   }
   
   if (!adminMatchQuantity.value || adminMatchQuantity.value < 1) {
+    console.log('Invalid quantity');
     alert('Please enter a valid quantity');
     return;
   }
@@ -287,14 +391,21 @@ async function createAdminMatch(request) {
       isAdminSource: true
     };
     
-    await api.post('/createAdminMatch', matchRequest);
+    console.log('Sending admin match request:', matchRequest);
+    
+    const response = await api.post('/createAdminMatch', matchRequest);
+    console.log('Admin match response:', response);
+    
     alert('Match created successfully from admin inventory!');
     router.push({ path: `/match-view` });
   } catch (error) {
-    console.error('Match Creation Failed', error);
+    console.error('ERROR in createAdminMatch:', error);
+    console.error('Error response:', error.response);
     alert('Failed to create match from admin inventory. Please try again.');
   }
-}
+  
+  console.log('=== CREATE ADMIN MATCH END ===');
+};
 
 // Create a match from a donor pledge
 async function createPledgeMatch(request, pledge) {
@@ -401,9 +512,34 @@ watch(pledgeMatchQuantity, (value) => {
 });
 
 // Load initial data
-onMounted(() => {
-  const requestId = route.params.id;
-  getRequestDetails(requestId);
+onMounted(async () => {
+  console.log('=== MANUAL MATCH FORM MOUNTED ===');
+  
+  try {
+    const requestId = route.params.id;
+    console.log('Route params:', route.params);
+    console.log('Request ID from route:', requestId);
+    console.log('Auth store user ID:', authStore.userId);
+    console.log('Is Admin Observer:', isAdminObserver.value);
+    console.log('Can Create Matches:', canCreateMatches.value);
+    
+    if (!requestId) {
+      console.error('ERROR: No request ID in route params');
+      alert('Error: No request ID provided');
+      return;
+    }
+    
+    console.log('Starting to load request details...');
+    await getRequestDetails(requestId);
+    console.log('Request details loaded:', selectedRequest.value);
+    
+  } catch (error) {
+    console.error('ERROR in onMounted:', error);
+    console.error('Error stack:', error.stack);
+    alert('Error loading page: ' + error.message);
+  }
+  
+  console.log('=== MANUAL MATCH FORM MOUNTED COMPLETE ===');
 });
 </script>
 
