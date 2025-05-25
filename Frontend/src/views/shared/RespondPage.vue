@@ -205,12 +205,36 @@ const createPledge = async () => {
   isSubmitting.value = true
   
   try {
+    // Debug logging to see what we're sending
+    console.log('Request details:', requestDetails.value);
+    console.log('Auth user ID:', authStore.userId);
+    console.log('Pledge quantity:', pledgeQuantity.value);
+    console.log('Days to ship:', daysToShip.value);
+    
     const pledgeData = {
       user_id: authStore.userId,
       selected_category_id: requestDetails.value.category_id,
-      selected_item_id: requestDetails.value.item_id,
+      selected_item_id: requestDetails.value.item_id || null, // Handle null case
       item_quantity: pledgeQuantity.value,
-      days_to_ship: daysToShip.value
+      days_to_ship: daysToShip.value || null // Handle null case
+    }
+    
+    console.log('Sending pledge data:', pledgeData);
+    
+    // Validate required fields on frontend before sending
+    if (!pledgeData.user_id) {
+      alert('Error: User not logged in properly. Please log in again.');
+      return;
+    }
+    
+    if (!pledgeData.selected_category_id) {
+      alert('Error: No category selected. Please try again.');
+      return;
+    }
+    
+    if (!pledgeData.item_quantity || pledgeData.item_quantity < 1) {
+      alert('Error: Invalid quantity. Please enter a valid quantity.');
+      return;
     }
     
     const response = await api.post('/createPledge', pledgeData)
@@ -235,8 +259,12 @@ const createPledge = async () => {
     }
   } catch (error) {
     console.error('Error creating pledge:', error)
+    console.error('Error response:', error.response)
+    
     if (error.response?.data?.error) {
       alert('Error: ' + error.response.data.error)
+    } else if (error.response?.status === 400) {
+      alert('Bad request - please check that all required fields are filled out correctly.')
     } else {
       alert('Error creating pledge. Please try again later.')
     }

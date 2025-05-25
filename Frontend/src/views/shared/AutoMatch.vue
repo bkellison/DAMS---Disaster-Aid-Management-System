@@ -5,7 +5,7 @@
       
       <!-- Admin Observer Warning -->
       <div v-if="isAdminObserver" class="observer-warning">
-        <strong>👁️ Admin Observer Mode:</strong> You can view the auto-matching interface but cannot create matches. This is a read-only preview of the automatic matching process.
+        <strong>Admin Observer Mode:</strong> You can view the auto-matching interface but cannot create matches. This is a read-only preview of the automatic matching process.
       </div>
       
       <div v-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
@@ -119,7 +119,7 @@
                 :title="isAdminObserver ? 'Admin Observers cannot create matches' : `Create auto match using ${matchType.name} algorithm`"
               >
                 <span class="match-name">
-                  {{ isAdminObserver ? '👁️ View Only - ' : '' }}{{ capitalizeFirstLetter(matchType.name) }}
+                  {{ isAdminObserver ? 'View Only - ' : '' }}{{ capitalizeFirstLetter(matchType.name) }}
                 </span>
                 <span class="match-description">{{ matchType.description }}</span>
                 <span v-if="isPreferredMethod(matchType)" class="preferred-badge">Recipient's Preference</span>
@@ -128,7 +128,7 @@
           </div>
           
           <div v-if="isAdminObserver" class="observer-notice">
-            <p>🔒 Admin Observers can view the auto-matching interface and see all available algorithms and inventory.</p>
+            <p>Admin Observers can view the auto-matching interface and see all available algorithms and inventory.</p>
             <p>However, you cannot create matches or modify data. This ensures you can monitor the system without making changes.</p>
           </div>
           

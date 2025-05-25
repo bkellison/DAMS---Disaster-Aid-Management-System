@@ -443,29 +443,67 @@ def create_pledge():
         item_quantity = data_payload.get("item_quantity")
         days_to_ship = data_payload.get("days_to_ship")
 
-        #Verify valid inputs
-        if not user_id or not selected_category_id or not selected_item_id or not item_quantity:
-            return jsonify({"error": "Missing requird fields"}), 400
+        # Debug logging
+        print("Received pledge data:", data_payload)
+
+        # Enhanced validation with specific error messages
+        if not user_id:
+            return jsonify({"error": "Missing user_id"}), 400
+            
+        if not selected_category_id:
+            return jsonify({"error": "Missing selected_category_id"}), 400
+            
+        if not selected_item_id:
+            return jsonify({"error": "Missing selected_item_id"}), 400
+            
+        if not item_quantity:
+            return jsonify({"error": "Missing item_quantity"}), 400
+            
+        try:
+            item_quantity = int(item_quantity)
+            if item_quantity < 1:
+                return jsonify({"error": "Item quantity must be at least 1"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Item quantity must be a valid number"}), 400
+
+        # Validate days_to_ship if provided
+        if days_to_ship is not None:
+            try:
+                days_to_ship = int(days_to_ship)
+                if days_to_ship < 1:
+                    return jsonify({"error": "Days to ship must be at least 1"}), 400
+            except (ValueError, TypeError):
+                return jsonify({"error": "Days to ship must be a valid number"}), 400
         
-        #Confirm user_id has role of donor
+        # Confirm user has donor role
         confirm_user_role_query = "SELECT * FROM user WHERE user_id = :user_id"
-        confirm_user_role = db.session.execute(text(confirm_user_role_query), ({"user_id": user_id})).fetchone()
+        confirm_user_role = db.session.execute(text(confirm_user_role_query), {"user_id": user_id}).fetchone()
 
-        if confirm_user_role.role != 'Donor':
-            #Return error if username already exists
-            return jsonify({"error": "User does not have permisson!"}), 400
+        if not confirm_user_role:
+            return jsonify({"error": "User not found"}), 404
 
+        if confirm_user_role.role not in ['Donor', 'Admin']:
+            return jsonify({"error": "User does not have permission to create pledges"}), 403
+
+        # Create the pledge
         new_pledge_query = "INSERT INTO dr_events.pledge (user_id, item_id, item_quantity, days_to_ship) VALUES (:user_id, :item_id, :item_quantity, :days_to_ship)"
-        db.session.execute((text(new_pledge_query)), ({"user_id": user_id, "item_id": selected_item_id, "item_quantity": item_quantity, "days_to_ship": days_to_ship}))
-        db.session.commit() #Save to db
+        db.session.execute(text(new_pledge_query), {
+            "user_id": user_id, 
+            "item_id": selected_item_id, 
+            "item_quantity": item_quantity, 
+            "days_to_ship": days_to_ship
+        })
+        db.session.commit()
 
         return jsonify({"message": "Pledge request created successfully"}), 201
+        
     except SQLAlchemyError as ex:
         db.session.rollback()
-        # Handle database errors
+        print("Database error:", ex)
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:        
-        # Handle other errors
+    except Exception as ex:
+        db.session.rollback()
+        print("General error:", ex)
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 @api_routes.route('/cancelPledge/<int:pledge_id>', methods=["POST"])
