@@ -644,7 +644,7 @@ onMounted(() => {
 
 .status-badge.needs-pledges {
   background: #ffebee;
-  color: #d32f2f;
+  color: #5c4033;;
   border: 1px solid #ffcdd2;
 }
 
@@ -680,7 +680,7 @@ onMounted(() => {
 }
 
 .info-row .value.urgent {
-  color: #d32f2f;
+  color: #5c4033;;
   font-weight: 600;
 }
 
@@ -714,15 +714,15 @@ onMounted(() => {
 }
 
 .inventory-total.no-inventory {
-  color: #d32f2f;
+  color: #5c4033;;
 }
 
 .inventory-total.low-inventory {
-  color: #f57c00;
+  color: #5c4033;;
 }
 
 .inventory-total.good-inventory {
-  color: #2e7d32;
+  color: #5c4033;;
 }
 
 .inventory-sources {
@@ -747,15 +747,15 @@ onMounted(() => {
 }
 
 .can-fulfill {
-  color: #2e7d32;
+  color: #5c4033;;
 }
 
 .partial-fulfill {
-  color: #f57c00;
+  color: #5c4033;;
 }
 
 .no-fulfill {
-  color: #d32f2f;
+  color: #5c4033;;
 }
 
 .your-pledges-info {
