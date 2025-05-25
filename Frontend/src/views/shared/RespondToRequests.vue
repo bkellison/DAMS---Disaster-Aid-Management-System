@@ -491,7 +491,6 @@ onMounted(() => {
   font-size: 16px;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -534,7 +533,6 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Controls Section */
 .controls-section {
   display: flex;
   justify-content: space-between;
@@ -571,7 +569,6 @@ onMounted(() => {
   min-width: 150px;
 }
 
-/* Loading and Empty States */
 .loading-state {
   text-align: center;
   padding: 50px;
@@ -599,7 +596,6 @@ onMounted(() => {
   color: #8B5E3C;
 }
 
-/* Request Cards */
 .requests-list {
   display: flex;
   flex-direction: column;
@@ -662,12 +658,12 @@ onMounted(() => {
 }
 
 .request-info {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .info-row {
   display: flex;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   align-items: flex-start;
 }
 
@@ -688,7 +684,11 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* Enhanced: Inventory Info Styling */
+.info-row .value.still-needed {
+  color: #6c757d;
+  font-weight: 500;
+}
+
 .inventory-info {
   background: #f8f9fa;
   border-radius: 8px;
@@ -727,23 +727,18 @@ onMounted(() => {
 
 .inventory-sources {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   font-size: 13px;
-  color: #666;
+  color: #5c4033;
 }
 
-.admin-inventory {
-  background: #e3f2fd;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #90caf9;
-}
-
+.admin-inventory,
 .pledge-inventory {
-  background: #f3e5f5;
+  background: #f9f3e8;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #ce93d8;
+  border: 1px solid #e0d4c3;
+  color: #5c4033;
 }
 
 .fulfillment-indicator {
@@ -764,11 +759,11 @@ onMounted(() => {
 }
 
 .your-pledges-info {
-  background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+  background: linear-gradient(135deg, #f9f3e8, #f5e9db);
   border-radius: 8px;
   padding: 12px;
   margin: 10px 0;
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #c8b59c;
 }
 
 .pledge-details {
@@ -786,38 +781,24 @@ onMounted(() => {
 .pledge-total {
   font-weight: 600;
   font-size: 16px;
-  color: #2e7d32;
+  color: #5c4033;
 }
 
 .pledge-breakdown {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   font-size: 13px;
   flex-wrap: wrap;
 }
 
-.allocated-items {
-  background: #fff3e0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #ffb74d;
-  color: #e65100;
-}
-
-.fulfilled-items {
-  background: #e8f5e8;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #81c784;
-  color: #2e7d32;
-}
-
+.allocated-items,
+.fulfilled-items,
 .available-items {
-  background: #e3f2fd;
+  background: #f9f3e8;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #64b5f6;
-  color: #1976d2;
+  border: 1px solid #e0d4c3;
+  color: #5c4033;
 }
 
 .pledge-status {
@@ -829,7 +810,6 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Progress Section */
 .progress-section {
   margin-bottom: 20px;
 }
@@ -861,14 +841,12 @@ onMounted(() => {
   text-align: right;
 }
 
-/* Action Buttons */
 .card-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -883,7 +861,6 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .respond-container {
     padding: 10px;
