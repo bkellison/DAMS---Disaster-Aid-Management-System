@@ -757,12 +757,27 @@ def get_request_details(request_id):
     try:
         query = text("""
             SELECT r.request_id, r.details, r.quantity, r.status, u.username, 
-                   e.event_name, c.category_name, i.name as item_name
+                   e.event_name, c.category_name, i.name as item_name,
+                   r.category_id, r.item_id, c.category_id as category_id_check,
+                   r.preferred_match_type_id, mt.name as preferred_match_type_name, 
+                   mt.description as preferred_match_type_description,
+                   e.location as event_location,
+                   CASE WHEN current_matches.request_id IS NULL THEN r.quantity
+				WHEN r.quantity - current_matches.total_matched < 0 THEN 0
+				ELSE IFNULL(r.quantity, 0) - IFNULL(current_matches.total_matched, 0) END AS request_quantity_remaining
             FROM dr_events.request r
-            JOIN user u ON r.user_id = u.user_id
+            JOIN dr_admin.user u ON r.user_id = u.user_id
             JOIN dr_events.disaster_event e ON r.event_id = e.event_id
             JOIN dr_events.category c ON r.category_id = c.category_id
             LEFT JOIN dr_events.item i ON r.item_id = i.item_id
+            LEFT JOIN dr_events.match_type mt ON r.preferred_match_type_id = mt.match_type_id
+            LEFT OUTER JOIN
+			(
+				select `match`.request_id, SUM(`match`.match_quantity) AS total_matched
+				from dr_events.`match`
+				WHERE `match`.canceled_flag = 0
+				GROUP BY `match`.request_id
+			) current_matches ON r.request_id = current_matches.request_id 
             WHERE r.request_id = :request_id
         """)
         row = db.session.execute(query, {"request_id": request_id}).fetchone()
@@ -777,13 +792,22 @@ def get_request_details(request_id):
             "status": row.status,
             "requested_by": row.username,
             "event_name": row.event_name,
+            "event_location": row.event_location,
             "category": row.category_name,
-            "item_name": row.item_name  # Will be None if no specific item
+            "category_id": row.category_id,  # Make sure this field is included
+            "item_name": row.item_name,
+            "item_id": row.item_id,  # Make sure this field is included
+            "preferred_match_type_id": row.preferred_match_type_id,
+            "preferred_match_type_name": row.preferred_match_type_name,
+            "preferred_match_type_description": row.preferred_match_type_description,
+            "request_quantity_remaining": row.request_quantity_remaining
         }
 
+        print("Returning request data:", request_data)  # Debug logging
         return jsonify(request_data), 200
 
     except Exception as ex:
+        print("Error in get_request_details:", ex)
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
     
 @api_routes.route('/submitResponse', methods=["POST"])

@@ -205,16 +205,27 @@ const createPledge = async () => {
   isSubmitting.value = true
   
   try {
-    // Debug logging to see what we're sending
-    console.log('Request details:', requestDetails.value);
+    console.log('Full request details object:', requestDetails.value);
+    console.log('Available fields:', Object.keys(requestDetails.value || {}));
+    
+   
+    const categoryId = requestDetails.value?.category_id || 
+                      requestDetails.value?.categoryId || 
+                      requestDetails.value?.category?.category_id;
+                      
+    const itemId = requestDetails.value?.item_id || 
+                  requestDetails.value?.itemId;
+    
+    console.log('Extracted category ID:', categoryId);
+    console.log('Extracted item ID:', itemId);
     console.log('Auth user ID:', authStore.userId);
     console.log('Pledge quantity:', pledgeQuantity.value);
     console.log('Days to ship:', daysToShip.value);
     
     const pledgeData = {
       user_id: authStore.userId,
-      selected_category_id: requestDetails.value.category_id,
-      selected_item_id: requestDetails.value.item_id || null, // Handle null case
+      selected_category_id: categoryId,
+      selected_item_id: itemId || null, // Handle null case
       item_quantity: pledgeQuantity.value,
       days_to_ship: daysToShip.value || null // Handle null case
     }
@@ -228,7 +239,7 @@ const createPledge = async () => {
     }
     
     if (!pledgeData.selected_category_id) {
-      alert('Error: No category selected. Please try again.');
+      alert('Error: Could not determine category from request. Request details: ' + JSON.stringify(requestDetails.value));
       return;
     }
     
