@@ -564,25 +564,182 @@ def create_match():
         request_id = data_payload.get("requestId")
         pledge_id = data_payload.get("pledgeId")
         match_quantity = data_payload.get("matchQuantity")
-        match_status = 'matched',
+        match_status = 'matched'  # Fixed: removed comma that made this a tuple
         match_type = 1
 
-        #Verify valid inputs
-        if not request_id or not pledge_id or not match_quantity:
-            return jsonify({"error": "Missing requird fields"}), 400
-       
-        create_match_sp = "CALL dr_events.create_match(:param_pledge_id, :param_request_id, :param_match_quantity, :param_match_status, :match_type)"
-        db.session.execute((text(create_match_sp)), ({"param_pledge_id": pledge_id, "param_request_id": request_id, "param_match_quantity": match_quantity, "param_match_status": match_status, "match_type": match_type}))
-        db.session.commit() #Save to db
+        # Debug logging
+        print("Received match data:", data_payload)
+        print("Extracted values:", {
+            "request_id": request_id,
+            "pledge_id": pledge_id, 
+            "match_quantity": match_quantity,
+            "match_status": match_status,
+            "match_type": match_type
+        })
 
-        return jsonify({"message": "Match request created successfully"}), 200
+        # Verify valid inputs
+        if not request_id or not pledge_id or not match_quantity:
+            missing_fields = []
+            if not request_id: missing_fields.append("requestId")
+            if not pledge_id: missing_fields.append("pledgeId") 
+            if not match_quantity: missing_fields.append("matchQuantity")
+            return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
+
+        # Validate that match_quantity is a positive number
+        try:
+            match_quantity = int(match_quantity)
+            if match_quantity <= 0:
+                return jsonify({"error": "Match quantity must be greater than 0"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Match quantity must be a valid number"}), 400
+
+        # Check if the request exists
+        request_check_query = text("SELECT * FROM dr_events.request WHERE request_id = :request_id")
+        request_exists = db.session.execute(request_check_query, {"request_id": request_id}).fetchone()
+        if not request_exists:
+            return jsonify({"error": "Request not found"}), 404
+
+        # Check if the pledge exists and has enough available quantity
+        pledge_check_query = text("""
+            SELECT pledge_id, item_quantity, allocated_quantity, fulfilled_quantity,
+                   (item_quantity - (allocated_quantity + fulfilled_quantity)) as available_quantity
+            FROM dr_events.pledge 
+            WHERE pledge_id = :pledge_id AND canceled_flag = 0
+        """)
+        pledge_data = db.session.execute(pledge_check_query, {"pledge_id": pledge_id}).fetchone()
+        
+        if not pledge_data:
+            return jsonify({"error": "Pledge not found or has been canceled"}), 404
+            
+        if pledge_data.available_quantity < match_quantity:
+            return jsonify({
+                "error": f"Insufficient pledge quantity. Available: {pledge_data.available_quantity}, Requested: {match_quantity}"
+            }), 400
+
+        # Call the stored procedure with correct parameter names and types
+        create_match_sp = text("""
+            CALL dr_events.create_match(
+                :param_pledge_id, 
+                :param_request_id, 
+                :param_match_quantity, 
+                :param_match_status, 
+                :param_match_type_id
+            )
+        """)
+        
+        db.session.execute(create_match_sp, {
+            "param_pledge_id": pledge_id,
+            "param_request_id": request_id, 
+            "param_match_quantity": match_quantity,
+            "param_match_status": match_status,
+            "param_match_type_id": match_type
+        })
+        
+        db.session.commit()
+
+        return jsonify({"message": "Match created successfully"}), 201
+        
     except SQLAlchemyError as ex:
         db.session.rollback()
-        # Handle database errors
+        print("Database error in create_match:", ex)
         return jsonify({"error": "Database error", "message": str(ex)}), 500
-    except Exception as ex:        
-        # Handle other errors
+    except Exception as ex:
+        db.session.rollback()
+        print("General error in create_match:", ex)
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
+@api_routes.route('/createMatchDirect', methods=["POST"])
+def create_match_direct():
+    """Direct implementation without stored procedure for debugging"""
+    db = get_db()
+    data_payload = request.get_json()    
+
+    try:
+        request_id = data_payload.get("requestId")
+        pledge_id = data_payload.get("pledgeId")
+        match_quantity = data_payload.get("matchQuantity")
+
+        print("Creating match directly:", data_payload)
+
+        # Validate inputs
+        if not all([request_id, pledge_id, match_quantity]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        match_quantity = int(match_quantity)
+        if match_quantity <= 0:
+            return jsonify({"error": "Invalid match quantity"}), 400
+
+        # Start transaction
+        db.session.begin()
+
+        # 1. Get shipping address for the recipient
+        address_query = text("""
+            SELECT concat_ws(' ',
+                   address_line1,
+                   address_line2,
+                   CONCAT_WS(', ',			
+                        city,
+                        state				
+                    ), zip_code) AS full_address
+            FROM dr_events.request
+                INNER JOIN dr_admin.user ON request.user_id = user.user_id
+            WHERE request_id = :request_id
+        """)
+        
+        address_result = db.session.execute(address_query, {"request_id": request_id}).fetchone()
+        shipping_address = address_result.full_address if address_result else None
+
+        # 2. Create the match record
+        insert_match_query = text("""
+            INSERT INTO dr_events.`match` 
+            (pledge_id, request_id, match_status, match_quantity, match_type_id, shipping_address)
+            VALUES 
+            (:pledge_id, :request_id, 'matched', :match_quantity, 1, :shipping_address)
+        """)
+        
+        db.session.execute(insert_match_query, {
+            "pledge_id": pledge_id,
+            "request_id": request_id,
+            "match_quantity": match_quantity,
+            "shipping_address": shipping_address
+        })
+
+        # 3. Update pledge's allocated_quantity
+        update_pledge_query = text("""
+            UPDATE dr_events.pledge
+            SET allocated_quantity = allocated_quantity + :match_quantity, 
+                pledge_status = 'partially allocated'
+            WHERE pledge_id = :pledge_id
+        """)
+        
+        db.session.execute(update_pledge_query, {
+            "pledge_id": pledge_id,
+            "match_quantity": match_quantity
+        })
+
+        # 4. Update request's status
+        update_request_query = text("""
+            UPDATE dr_events.request
+            SET status = 'matched'
+            WHERE request_id = :request_id
+        """)
+        
+        db.session.execute(update_request_query, {"request_id": request_id})
+
+        # Commit the transaction
+        db.session.commit()
+
+        return jsonify({"message": "Match created successfully"}), 201
+
+    except SQLAlchemyError as ex:
+        db.session.rollback()
+        print("Database error in create_match_direct:", ex)
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        db.session.rollback()
+        print("General error in create_match_direct:", ex)
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
 @api_routes.route('/getMatches', methods=["GET"])
 def get_matches():
     db = get_db()

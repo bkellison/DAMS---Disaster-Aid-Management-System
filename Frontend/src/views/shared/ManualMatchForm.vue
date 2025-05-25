@@ -315,12 +315,52 @@ async function createPledgeMatch(request, pledge) {
       matchQuantity: pledgeMatchQuantity.value
     };
     
-    await api.post('/createMatch', matchRequest);
-    alert('Match created successfully from donor pledge!');
-    router.push({ path: `/match-view` });
+    // Add debugging
+    console.log('Sending match data:', matchRequest);
+    console.log('Data types:', {
+      requestId: typeof matchRequest.requestId,
+      pledgeId: typeof matchRequest.pledgeId, 
+      matchQuantity: typeof matchRequest.matchQuantity
+    });
+    
+    // Validate data before sending
+    if (!matchRequest.requestId || !matchRequest.pledgeId || !matchRequest.matchQuantity) {
+      console.error('Missing required match data:', matchRequest);
+      alert('Missing required data for match creation');
+      return;
+    }
+    
+    // Ensure matchQuantity is a number
+    matchRequest.matchQuantity = Number(matchRequest.matchQuantity);
+    if (isNaN(matchRequest.matchQuantity) || matchRequest.matchQuantity <= 0) {
+      console.error('Invalid match quantity:', matchRequest.matchQuantity);
+      alert('Invalid match quantity');
+      return;
+    }
+    
+    console.log('Final match data being sent:', matchRequest);
+    
+    const response = await api.post('/createMatch', matchRequest);
+    
+    if (response.status === 201 || response.status === 200) {
+      alert('Match created successfully from donor pledge!');
+      router.push({ path: `/match-view` });
+    } else {
+      console.error('Unexpected response:', response);
+      alert('Unexpected response from server');
+    }
+    
   } catch (error) {
-    console.error('Match Creation Failed', error);
-    alert('Failed to create match from donor pledge. Please try again.');
+    console.error('Error creating match:', error);
+    console.error('Error response:', error.response);
+    
+    if (error.response?.data?.error) {
+      alert('Error: ' + error.response.data.error);
+    } else if (error.response?.status === 500) {
+      alert('Server error occurred. Please check the console and try again.');
+    } else {
+      alert('Failed to create match from donor pledge. Please try again.');
+    }
   }
 }
 
