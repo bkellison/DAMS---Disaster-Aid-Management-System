@@ -1,349 +1,473 @@
 <template>
   <div class="respond-container">
     <div class="content-box">
-      <h2 class="respond-header">Respond to Requests</h2>
+      <h1 class="respond-header">Respond to Requests</h1>
       <p class="description">Browse the list of disaster relief requests that need your help.</p>
+      
+      <!-- Summary Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ totalRequests }}</div>
+          <div class="stat-label">Total Requests</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ totalItemsNeeded }}</div>
+          <div class="stat-label">Total Items Needed</div>
+        </div>
+        <div class="stat-card urgent">
+          <div class="stat-number">{{ urgentRequests }}</div>
+          <div class="stat-label">Urgent Requests</div>
+        </div>
+      </div>
 
-      <!-- Loading indicator -->
-      <div v-if="loading" class="loading">
+      <!-- Filters and Controls -->
+      <div class="controls-section">
+        <div class="filters">
+          <div class="filter-group">
+            <label for="categoryFilter">Filter by Category:</label>
+            <select id="categoryFilter" v-model="selectedCategory" @change="filterRequests">
+              <option value="">All Categories</option>
+              <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
+                {{ category.category_name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="sortBy">Sort by:</label>
+            <select id="sortBy" v-model="sortBy" @change="sortRequests">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="quantity-high">Highest Quantity</option>
+              <option value="quantity-low">Lowest Quantity</option>
+              <option value="remaining-high">Most Remaining</option>
+              <option value="remaining-low">Least Remaining</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="refresh-button">
+          <AppButton @click="refreshData" variant="secondary">Refresh</AppButton>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p>Loading requests...</p>
       </div>
 
-      <!-- No requests message -->
-      <div v-else-if="requests.length === 0" class="no-requests">
-        <p>No requests available at the moment.</p>
-        <AppButton variant="secondary" @click="loadRequests">Refresh</AppButton>
+      <!-- No Requests State -->
+      <div v-else-if="filteredRequests.length === 0" class="no-requests">
+        <h3>No requests found</h3>
+        <p v-if="selectedCategory">Try selecting a different category or clearing the filter.</p>
+        <p v-else>There are currently no requests that need responses.</p>
       </div>
 
-      <!-- Requests list -->
-      <div v-else>
-        <!-- Summary stats -->
-        <div class="summary-stats">
-          <div class="stat-card">
-            <h3>Total Requests</h3>
-            <p class="stat-number">{{ requests.length }}</p>
-          </div>
-          <div class="stat-card">
-            <h3>Total Items Needed</h3>
-            <p class="stat-number">{{ totalItemsNeeded }}</p>
-          </div>
-          <div class="stat-card">
-            <h3>Urgent Requests</h3>
-            <p class="stat-number urgent">{{ urgentRequests }}</p>
-          </div>
-        </div>
-
-        <!-- Filter and sort options -->
-        <div class="controls">
-          <div class="filter-group">
-            <label for="categoryFilter">Filter by Category:</label>
-            <select id="categoryFilter" v-model="selectedCategory" @change="applyFilters">
-              <option value="">All Categories</option>
-              <option v-for="category in uniqueCategories" :key="category" :value="category">
-                {{ category }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="filter-group">
-            <label for="sortBy">Sort by:</label>
-            <select id="sortBy" v-model="sortBy" @change="applySorting">
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="quantity_desc">Highest Quantity</option>
-              <option value="quantity_asc">Lowest Quantity</option>
-              <option value="remaining_desc">Most Remaining</option>
-              <option value="remaining_asc">Least Remaining</option>
-            </select>
+      <!-- Requests List -->
+      <div v-else class="requests-list">
+        <div v-for="request in paginatedRequests" :key="request.request_id" class="request-card">
+          <!-- Header with event and category -->
+          <div class="card-header">
+            <div class="event-info">
+              <h3>{{ request.event_name }} - {{ request.category }}</h3>
+              <div class="status-badge needs-pledges">Needs Pledges</div>
+            </div>
+            <div class="location">
+              <strong>Location:</strong> {{ request.event_location }}
+            </div>
           </div>
 
-          <AppButton variant="secondary" @click="loadRequests" class="refresh-btn">
-            Refresh
-          </AppButton>
-        </div>
+          <!-- Request Details -->
+          <div class="card-body">
+            <div class="request-info">
+              <div class="info-row">
+                <span class="label">Requested by:</span>
+                <span class="value">{{ request.requested_by }}</span>
+              </div>
+              
+              <div class="info-row" v-if="request.item_name">
+                <span class="label">Specific Item:</span>
+                <span class="value">{{ request.item_name }}</span>
+              </div>
+              
+              <!-- ENHANCED: Available Inventory Display -->
+              <div class="info-row inventory-info" v-if="request.item_name">
+                <span class="label">Available Inventory:</span>
+                <div class="inventory-details">
+                  <div class="inventory-breakdown">
+                    <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
+                      {{ request.available_inventory || 0 }} available
+                    </span>
+                    <div class="inventory-sources" v-if="request.inventory_breakdown">
+                      <span class="admin-inventory" v-if="request.inventory_breakdown.admin > 0">
+                        {{ request.inventory_breakdown.admin }} (admin)
+                      </span>
+                      <span class="pledge-inventory" v-if="request.inventory_breakdown.pledges > 0">
+                        {{ request.inventory_breakdown.pledges }} (pledged)
+                      </span>
+                    </div>
+                  </div>
+                  <div class="fulfillment-indicator" v-if="request.available_inventory >= request.request_quantity_remaining">
+                    <span class="can-fulfill">✓ Can be fully fulfilled</span>
+                  </div>
+                  <div class="fulfillment-indicator" v-else-if="request.available_inventory > 0">
+                    <span class="partial-fulfill">⚠ Can be partially fulfilled</span>
+                  </div>
+                  <div class="fulfillment-indicator" v-else>
+                    <span class="no-fulfill">⚠ No inventory available</span>
+                  </div>
+                </div>
+              </div>
 
-        <!-- Request cards -->
-        <ul class="request-list">
-          <li v-for="request in filteredAndSortedRequests" :key="request.request_id" class="request-card">
-            <div class="card-header">
-              <h3 class="request-title">{{ request.event_name }} - {{ request.category }}</h3>
-              <div class="request-status" :class="getStatusClass(request)">
-                {{ getStatusText(request) }}
+              <!-- ENHANCED: Your Pledges Display -->
+              <div class="info-row your-pledges-info" v-if="request.your_pledged_quantity > 0">
+                <span class="label">Your Pledges:</span>
+                <div class="pledge-details">
+                  <div class="pledge-summary">
+                    <span class="pledge-total">
+                      {{ request.your_pledged_quantity }} items pledged by you
+                    </span>
+                    <div class="pledge-breakdown" v-if="request.your_pledge_breakdown">
+                      <span class="allocated-items" v-if="request.your_pledge_breakdown.allocated > 0">
+                        {{ request.your_pledge_breakdown.allocated }} allocated
+                      </span>
+                      <span class="fulfilled-items" v-if="request.your_pledge_breakdown.fulfilled > 0">
+                        {{ request.your_pledge_breakdown.fulfilled }} fulfilled
+                      </span>
+                      <span class="available-items" v-if="request.your_pledge_breakdown.available > 0">
+                        {{ request.your_pledge_breakdown.available }} available
+                      </span>
+                    </div>
+                  </div>
+                  <div class="pledge-status">
+                    <span class="contribution-indicator">
+                      You've contributed to this request
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-row">
+                <span class="label">Total Requested:</span>
+                <span class="value">{{ request.quantity }}</span>
+              </div>
+              
+              <div class="info-row">
+                <span class="label">Still Needed:</span>
+                <span class="value urgent">{{ request.request_quantity_remaining }}</span>
+              </div>
+              
+              <div class="info-row">
+                <span class="label">Preferred Matching:</span>
+                <span class="value">{{ request.preferred_match_type_name }}</span>
+              </div>
+              
+              <div class="info-row" v-if="request.details">
+                <span class="label">Details:</span>
+                <span class="value">{{ request.details }}</span>
               </div>
             </div>
 
-            <div class="request-location">
-              <strong>Location:</strong> {{ request.event_location || 'Location not specified' }}
-            </div>
-            
-            <div class="request-details">
-              <div class="detail-row">
-                <span class="detail-label">Requested by:</span>
-                <span class="detail-value">{{ request.requested_by }}</span>
-              </div>
-              
-              <div v-if="request.item_name" class="detail-row">
-                <span class="detail-label">Specific Item:</span>
-                <span class="detail-value">{{ request.item_name }}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Total Requested:</span>
-                <span class="detail-value">{{ request.quantity }}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Still Needed:</span>
-                <span class="detail-value remaining" :class="{ 'urgent': request.request_quantity_remaining > request.quantity * 0.8 }">
-                  {{ request.request_quantity_remaining }}
-                </span>
-              </div>
-
-              <div v-if="request.preferred_match_type_name" class="detail-row">
-                <span class="detail-label">Preferred Matching:</span>
-                <span class="detail-value">{{ request.preferred_match_type_name }}</span>
-              </div>
-              
-              <div v-if="request.details && request.details.trim() !== ''" class="request-description">
-                <strong>Details:</strong> {{ request.details }}
-              </div>
-            </div>
-
-            <!-- Progress bar -->
+            <!-- Progress Bar -->
             <div class="progress-section">
-              <div class="progress-label">
+              <div class="progress-text">
                 Progress: {{ request.quantity - request.request_quantity_remaining }} / {{ request.quantity }} fulfilled
               </div>
               <div class="progress-bar">
                 <div 
                   class="progress-fill" 
                   :style="{ width: getProgressPercentage(request) + '%' }"
-                  :class="{ 'completed': getProgressPercentage(request) === 100 }">
-                </div>
+                ></div>
               </div>
               <div class="progress-percentage">{{ getProgressPercentage(request) }}%</div>
             </div>
 
-            <div class="button-group">
-              <!-- Donor buttons -->
+            <!-- Action Buttons -->
+            <div class="card-actions">
               <AppButton 
-                v-if="authStore.role === 'Donor'" 
-                variant="primary" 
-                @click="respondToRequest(request.request_id)"
-                :disabled="request.request_quantity_remaining <= 0">
-                {{ request.request_quantity_remaining <= 0 ? 'Fully Pledged' : 'Create Pledge' }}
-              </AppButton>
-              
-              <!-- Admin and Admin Observer buttons -->
-              <AppButton 
-                v-if="authStore.role === 'Admin' || authStore.role === 'Admin Observer'" 
-                variant="primary" 
-                @click="goToMatchForm(request.request_id)"
-                :disabled="request.request_quantity_remaining <= 0">
+                @click="navigateToManualMatch(request.request_id)" 
+                variant="primary"
+                size="small"
+              >
                 Manual Match
               </AppButton>
-              
               <AppButton 
-                v-if="authStore.role === 'Admin' || authStore.role === 'Admin Observer'" 
-                variant="secondary" 
-                @click="goToAutoMatch(request.request_id)"
-                :disabled="request.request_quantity_remaining <= 0">
+                @click="navigateToAutoMatch(request.request_id)" 
+                variant="secondary"
+                size="small"
+              >
                 Auto Match
               </AppButton>
-
               <AppButton 
-                v-if="authStore.role === 'Admin' || authStore.role === 'Admin Observer'" 
-                variant="info" 
-                @click="viewRequestDetails(request.request_id)">
+                @click="viewRequestDetails(request)" 
+                variant="outline"
+                size="small"
+              >
                 View Details
               </AppButton>
             </div>
-          </li>
-        </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="pagination">
+        <AppButton 
+          @click="currentPage--" 
+          :disabled="currentPage === 1"
+          variant="outline"
+          size="small"
+        >
+          Previous
+        </AppButton>
+        
+        <span class="page-info">
+          Page {{ currentPage }} of {{ totalPages }}
+        </span>
+        
+        <AppButton 
+          @click="currentPage++" 
+          :disabled="currentPage === totalPages"
+          variant="outline"
+          size="small"
+        >
+          Next
+        </AppButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { useRouter, onBeforeRouteUpdate } from 'vue-router';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
 import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
-authStore.loadUserDataFromCookie();
 
+// Reactive data
 const requests = ref([]);
+const categories = ref([]);
 const loading = ref(false);
 const selectedCategory = ref('');
 const sortBy = ref('newest');
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
-// Computed properties for stats and filtering
-const totalItemsNeeded = computed(() => {
-  return requests.value.reduce((sum, request) => {
-    return sum + Number(request.request_quantity_remaining || 0);
-  }, 0);
-});
+// Computed properties
+const totalRequests = computed(() => requests.value.length);
+const totalItemsNeeded = computed(() => 
+  requests.value.reduce((sum, req) => sum + req.request_quantity_remaining, 0)
+);
+const urgentRequests = computed(() => 
+  requests.value.filter(req => req.request_quantity_remaining === req.quantity).length
+);
 
-const urgentRequests = computed(() => {
-  return requests.value.filter(request => 
-    request.request_quantity_remaining > request.quantity * 0.8
-  ).length;
-});
-
-const uniqueCategories = computed(() => {
-  const categories = [...new Set(requests.value.map(request => request.category))];
-  return categories.sort();
-});
-
-const filteredAndSortedRequests = computed(() => {
+const filteredRequests = computed(() => {
   let filtered = requests.value;
-
-  // Apply category filter
+  
   if (selectedCategory.value) {
-    filtered = filtered.filter(request => request.category === selectedCategory.value);
+    filtered = filtered.filter(req => req.category_id == selectedCategory.value);
   }
-
-  // Apply sorting
-  const sorted = [...filtered];
-  switch (sortBy.value) {
-    case 'newest':
-      // Assuming request_id correlates with creation time
-      sorted.sort((a, b) => b.request_id - a.request_id);
-      break;
-    case 'oldest':
-      sorted.sort((a, b) => a.request_id - b.request_id);
-      break;
-    case 'quantity_desc':
-      sorted.sort((a, b) => b.quantity - a.quantity);
-      break;
-    case 'quantity_asc':
-      sorted.sort((a, b) => a.quantity - b.quantity);
-      break;
-    case 'remaining_desc':
-      sorted.sort((a, b) => b.request_quantity_remaining - a.request_quantity_remaining);
-      break;
-    case 'remaining_asc':
-      sorted.sort((a, b) => a.request_quantity_remaining - b.request_quantity_remaining);
-      break;
-  }
-
-  return sorted;
+  
+  return filtered;
 });
 
-// Load requests data
-const loadRequests = async () => {
-  loading.value = true;
-  try {
-    const response = await api.get('/getRequestsForResponse');
-    // Keep all requests but show their current remaining status
-    requests.value = response.data || [];
-    console.log('Loaded requests:', requests.value);
-  } catch (error) {
-    console.error('Error fetching requests:', error);
-    alert('Error loading requests. Please try again.');
-  } finally {
-    loading.value = false;
+const sortedRequests = computed(() => {
+  const sorted = [...filteredRequests.value];
+  
+  switch (sortBy.value) {
+    case 'oldest':
+      return sorted; // Already sorted by newest, reverse for oldest
+    case 'quantity-high':
+      return sorted.sort((a, b) => b.quantity - a.quantity);
+    case 'quantity-low':
+      return sorted.sort((a, b) => a.quantity - b.quantity);
+    case 'remaining-high':
+      return sorted.sort((a, b) => b.request_quantity_remaining - a.request_quantity_remaining);
+    case 'remaining-low':
+      return sorted.sort((a, b) => a.request_quantity_remaining - b.request_quantity_remaining);
+    default: // newest
+      return sorted.reverse();
   }
-};
+});
 
-// Helper functions
+const paginatedRequests = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return sortedRequests.value.slice(start, end);
+});
+
+const totalPages = computed(() => 
+  Math.ceil(sortedRequests.value.length / itemsPerPage)
+);
+
+// Methods
 const getProgressPercentage = (request) => {
   if (request.quantity === 0) return 0;
   const fulfilled = request.quantity - request.request_quantity_remaining;
   return Math.round((fulfilled / request.quantity) * 100);
 };
 
-const getStatusText = (request) => {
-  if (request.request_quantity_remaining <= 0) {
-    return 'Fully Pledged';
-  } else if (request.request_quantity_remaining < request.quantity) {
-    return 'Partially Pledged';
-  } else {
-    return 'Needs Pledges';
+const getInventoryClass = (availableInventory) => {
+  if (availableInventory === 0) return 'no-inventory';
+  if (availableInventory < 5) return 'low-inventory';
+  return 'good-inventory';
+};
+
+const navigateToManualMatch = (requestId) => {
+  router.push(`/create-match/${requestId}`);
+};
+
+const navigateToAutoMatch = (requestId) => {
+  router.push(`/auto-match/${requestId}`);
+};
+
+const viewRequestDetails = (request) => {
+  // Could open a modal or navigate to a details page
+  alert(`Request Details:\n\nEvent: ${request.event_name}\nRequested by: ${request.requested_by}\nQuantity: ${request.quantity}\nDetails: ${request.details || 'No additional details'}`);
+};
+
+const fetchRequests = async () => {
+  loading.value = true;
+  try {
+    const response = await api.get('/getRequestsForResponse');
+    
+    // Enhanced: Fetch inventory data and user pledges for each request
+    const requestsWithInventory = await Promise.all(
+      response.data.map(async (request) => {
+        // Get available inventory for this specific item
+        if (request.item_name) {
+          try {
+            const inventoryResponse = await api.get('/getItemAvailability');
+            const itemInventory = inventoryResponse.data.find(
+              item => item.name === request.item_name
+            );
+            
+            if (itemInventory) {
+              request.available_inventory = itemInventory.available_combined || 0;
+              request.inventory_breakdown = {
+                admin: itemInventory.base_quantity || 0,
+                pledges: itemInventory.available_pledged || 0
+              };
+            } else {
+              request.available_inventory = 0;
+              request.inventory_breakdown = { admin: 0, pledges: 0 };
+            }
+          } catch (error) {
+            console.error('Error fetching inventory for item:', request.item_name, error);
+            request.available_inventory = 0;
+            request.inventory_breakdown = { admin: 0, pledges: 0 };
+          }
+        } else {
+          request.available_inventory = 0;
+          request.inventory_breakdown = { admin: 0, pledges: 0 };
+        }
+
+        // Enhanced: Get user's pledges for this specific item
+        try {
+          if (authStore.userId && request.item_name) {
+            const pledgesResponse = await api.get(`/getPledges?user_id=${authStore.userId}`);
+            
+            // Find pledges for this specific item
+            const userPledgesForItem = pledgesResponse.data.filter(
+              pledge => pledge.item_name === request.item_name
+            );
+            
+            if (userPledgesForItem.length > 0) {
+              // Calculate totals across all pledges for this item
+              const totalPledged = userPledgesForItem.reduce((sum, pledge) => sum + pledge.item_quantity, 0);
+              const totalAllocated = userPledgesForItem.reduce((sum, pledge) => sum + pledge.allocated_quantity, 0);
+              const totalFulfilled = userPledgesForItem.reduce((sum, pledge) => sum + pledge.fulfilled_quantity, 0);
+              const totalAvailable = userPledgesForItem.reduce((sum, pledge) => sum + pledge.items_left, 0);
+              
+              request.your_pledged_quantity = totalPledged;
+              request.your_pledge_breakdown = {
+                allocated: totalAllocated,
+                fulfilled: totalFulfilled,
+                available: totalAvailable
+              };
+            } else {
+              request.your_pledged_quantity = 0;
+              request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
+            }
+          } else {
+            request.your_pledged_quantity = 0;
+            request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
+          }
+        } catch (error) {
+          console.error('Error fetching user pledges for item:', request.item_name, error);
+          request.your_pledged_quantity = 0;
+          request.your_pledge_breakdown = { allocated: 0, fulfilled: 0, available: 0 };
+        }
+        
+        return request;
+      })
+    );
+    
+    requests.value = requestsWithInventory;
+  } catch (error) {
+    console.error('Error fetching requests:', error);
+    alert('Failed to load requests. Please try again.');
+  } finally {
+    loading.value = false;
   }
 };
 
-const getStatusClass = (request) => {
-  if (request.request_quantity_remaining <= 0) {
-    return 'status-complete';
-  } else if (request.request_quantity_remaining < request.quantity) {
-    return 'status-partial';
-  } else {
-    return 'status-pending';
+const fetchCategories = async () => {
+  try {
+    const response = await api.get('/getCategories');
+    categories.value = response.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
   }
 };
 
-// Filter and sort functions
-const applyFilters = () => {
-  // Computed property will automatically update
+const refreshData = () => {
+  fetchRequests();
+  fetchCategories();
 };
 
-const applySorting = () => {
-  // Computed property will automatically update
+const filterRequests = () => {
+  currentPage.value = 1; // Reset to first page when filtering
 };
 
-// Navigation functions
-const respondToRequest = (requestId) => {
-  router.push({ path: `/respond/${requestId}` });
+const sortRequests = () => {
+  currentPage.value = 1; // Reset to first page when sorting
 };
 
-const goToMatchForm = (requestId) => {
-  router.push({ path: `/create-match/${requestId}` });
-};
+// Watchers
+watch(() => filteredRequests.value.length, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = Math.max(1, totalPages.value);
+  }
+});
 
-const goToAutoMatch = (requestId) => {
-  router.push({ path: `/auto-match/${requestId}` });
-};
-
-const viewRequestDetails = (requestId) => {
-  router.push({ path: `/request-details/${requestId}` });
-};
-
-// Auto-refresh when returning from other pages
+// Lifecycle
 onMounted(() => {
-  loadRequests();
-});
-
-// Refresh when navigating back from a response/match page
-onBeforeRouteUpdate((to, from, next) => {
-  loadRequests();
-  next();
-});
-
-// Check for reload flag from localStorage (set when returning from pledge creation)
-if (localStorage.getItem('reloadRequests')) {
-  loadRequests();
-  localStorage.removeItem('reloadRequests');
-}
-
-// Watch for route changes to refresh data
-watch(() => router.currentRoute.value.fullPath, () => {
-  if (router.currentRoute.value.name === 'respond-to-requests') {
-    loadRequests();
-  }
+  fetchRequests();
+  fetchCategories();
 });
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 .respond-container {
-  font-family: 'Poppins', sans-serif;
   max-width: 1200px;
-  margin: auto;
-  padding: 50px 20px;
-  text-align: center;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .content-box {
   background-color: #f9f3e8;
   border-radius: 15px;
-  padding: 40px;
+  padding: 30px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0d4c3;
 }
@@ -353,7 +477,7 @@ watch(() => router.currentRoute.value.fullPath, () => {
   padding: 15px 30px;
   border-radius: 20px;
   display: inline-block;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 600;
   color: #5c4033;
   margin-bottom: 20px;
@@ -361,98 +485,73 @@ watch(() => router.currentRoute.value.fullPath, () => {
 
 .description {
   color: #6c757d;
+  margin-bottom: 30px;
   font-size: 16px;
-  margin-bottom: 30px;
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px;
-  color: #8B5E3C;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(139, 94, 60, 0.3);
-  border-radius: 50%;
-  border-top-color: #8B5E3C;
-  animation: spin 1s ease-in-out infinite;
-  margin-bottom: 15px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.no-requests {
-  font-size: 18px;
-  color: #777;
-  padding: 40px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-}
-
-.summary-stats {
-  display: flex;
-  justify-content: space-around;
   margin-bottom: 30px;
-  gap: 20px;
-  flex-wrap: wrap;
 }
 
 .stat-card {
-  background: #ffffff;
-  border: 2px solid #d3c0a3;
-  border-radius: 10px;
+  background: white;
+  border-radius: 12px;
   padding: 20px;
   text-align: center;
-  min-width: 120px;
-  flex: 1;
+  border: 2px solid #e0d4c3;
+  transition: transform 0.2s ease;
 }
 
-.stat-card h3 {
-  color: #5c4033;
-  font-size: 14px;
-  margin-bottom: 10px;
-  font-weight: 500;
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card.urgent {
+  border-color: #ff6b6b;
+  background: linear-gradient(135deg, #fff5f5, #ffebee);
 }
 
 .stat-number {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 36px;
+  font-weight: 700;
   color: #5c4033;
-  margin: 0;
+  margin-bottom: 5px;
 }
 
-.stat-number.urgent {
-  color: #dc3545;
+.stat-card.urgent .stat-number {
+  color: #d32f2f;
 }
 
-.controls {
+.stat-label {
+  font-size: 14px;
+  color: #8B5E3C;
+  font-weight: 500;
+}
+
+/* Controls Section */
+.controls-section {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   margin-bottom: 30px;
   gap: 20px;
   flex-wrap: wrap;
-  background: #ffffff;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid #d3c0a3;
+}
+
+.filters {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  text-align: left;
 }
 
 .filter-group label {
@@ -465,217 +564,354 @@ watch(() => router.currentRoute.value.fullPath, () => {
   padding: 8px 12px;
   border: 1px solid #d3c0a3;
   border-radius: 6px;
+  background: white;
   font-size: 14px;
-  background-color: #fcfcfc;
   min-width: 150px;
 }
 
-.refresh-btn {
-  margin-left: auto;
+/* Loading and Empty States */
+.loading-state {
+  text-align: center;
+  padding: 50px;
+  color: #8B5E3C;
 }
 
-.request-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #8B5E3C;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.no-requests {
+  text-align: center;
+  padding: 50px;
+  color: #8B5E3C;
+}
+
+/* Request Cards */
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .request-card {
-  background: #ffffff;
-  border: 2px solid #d3c0a3;
-  padding: 25px;
+  background: white;
   border-radius: 12px;
-  margin-bottom: 20px;
-  text-align: left;
-  transition: all 0.3s ease;
-  color: #5c4033;
+  border: 1px solid #e0d4c3;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .request-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
+  background: linear-gradient(135deg, #f5e1c5, #f0d4b8);
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0d4c3;
 }
 
-.request-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #5c4033;
-  margin: 0;
-  flex: 1;
-}
-
-.request-status {
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-left: 15px;
-}
-
-.status-complete {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-partial {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.status-pending {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.request-location {
-  background-color: #e8f5e8;
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin: 15px 0;
-  border-left: 4px solid #2e8b57;
-  font-size: 16px;
-  color: #2e8b57;
-}
-
-.request-details {
-  margin: 20px 0;
-}
-
-.detail-row {
+.event-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 8px;
 }
 
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  font-weight: 500;
-  color: #666;
-  min-width: 120px;
-}
-
-.detail-value {
-  color: #5c4033;
-  font-weight: 500;
-}
-
-.detail-value.remaining {
+.event-info h3 {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #007bff;
-}
-
-.detail-value.remaining.urgent {
-  color: #dc3545;
-}
-
-.request-description {
-  background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 15px;
-  border-left: 4px solid #8B5E3C;
   color: #5c4033;
-  line-height: 1.5;
 }
 
-.progress-section {
-  margin: 20px 0;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.progress-label {
+.status-badge.needs-pledges {
+  background: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+}
+
+.location {
   font-size: 14px;
+  color: #5c4033;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.request-info {
+  margin-bottom: 20px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8px;
+  align-items: flex-start;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: #5c4033;
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.info-row .value {
+  color: #6c757d;
+  flex: 1;
+}
+
+.info-row .value.urgent {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+/* Enhanced: Inventory Info Styling */
+.inventory-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.inventory-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inventory-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inventory-total {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.inventory-total.no-inventory {
+  color: #d32f2f;
+}
+
+.inventory-total.low-inventory {
+  color: #f57c00;
+}
+
+.inventory-total.good-inventory {
+  color: #2e7d32;
+}
+
+.inventory-sources {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
   color: #666;
+}
+
+.admin-inventory {
+  background: #e3f2fd;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #90caf9;
+}
+
+.pledge-inventory {
+  background: #f3e5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #ce93d8;
+}
+
+.fulfillment-indicator {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.can-fulfill {
+  color: #2e7d32;
+}
+
+.partial-fulfill {
+  color: #f57c00;
+}
+
+.no-fulfill {
+  color: #d32f2f;
+}
+
+/* Progress Section */
+.progress-section {
+  margin-bottom: 20px;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #5c4033;
   margin-bottom: 8px;
 }
 
 .progress-bar {
-  width: 100%;
-  height: 10px;
-  background-color: #e9ecef;
-  border-radius: 5px;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
   overflow: hidden;
   margin-bottom: 5px;
 }
 
 .progress-fill {
   height: 100%;
-  background-color: #007bff;
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
   transition: width 0.3s ease;
 }
 
-.progress-fill.completed {
-  background-color: #28a745;
-}
-
 .progress-percentage {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: #5c4033;
   text-align: right;
 }
 
-.button-group {
-  margin-top: 20px;
+/* Enhanced: Your Pledges Info Styling */
+.your-pledges-info {
+  background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  border-left: 4px solid #4caf50;
+}
+
+.pledge-details {
   display: flex;
-  gap: 15px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pledge-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pledge-total {
+  font-weight: 600;
+  font-size: 16px;
+  color: #2e7d32;
+}
+
+.pledge-breakdown {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
   flex-wrap: wrap;
 }
 
-/* Responsive design */
+.allocated-items {
+  background: #fff3e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #ffb74d;
+  color: #e65100;
+}
+
+.fulfilled-items {
+  background: #e8f5e8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #81c784;
+  color: #2e7d32;
+}
+
+.available-items {
+  background: #e3f2fd;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #64b5f6;
+  color: #1976d2;
+}
+
+.pledge-status {
+  font-size: 13px;
+}
+
+.contribution-indicator {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #5c4033;
+  font-weight: 500;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-  .summary-stats {
-    flex-direction: column;
-    gap: 15px;
+  .respond-container {
+    padding: 10px;
   }
   
-  .controls {
+  .content-box {
+    padding: 20px;
+  }
+  
+  .controls-section {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .filter-group {
-    width: 100%;
+  .filters {
+    justify-content: center;
   }
   
-  .filter-group select {
-    min-width: 100%;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .request-status {
-    margin-left: 0;
-    align-self: flex-start;
-  }
-  
-  .detail-row {
+  .event-info {
     flex-direction: column;
     align-items: flex-start;
-    gap: 5px;
+    gap: 8px;
   }
   
-  .button-group {
+  .card-actions {
+    justify-content: center;
+  }
+  
+  .inventory-sources {
     flex-direction: column;
+    gap: 4px;
+  }
+
+  .pledge-breakdown {
+    flex-direction: column;
+    gap: 4px;
   }
 }
 </style>
