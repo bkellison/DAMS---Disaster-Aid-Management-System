@@ -250,8 +250,8 @@ const itemsPerPage = 10;
 
 // Computed properties
 const totalRequests = computed(() => requests.value.length);
-const totalItemsNeeded = computed(() => 
-  requests.value.reduce((sum, req) => sum + req.request_quantity_remaining, 0)
+const totalItemsNeeded = computed(() =>
+  requests.value.reduce((sum, req) => sum + Number(req.request_quantity_remaining || 0), 0)
 );
 const urgentRequests = computed(() => 
   requests.value.filter(req => req.request_quantity_remaining === req.quantity).length
