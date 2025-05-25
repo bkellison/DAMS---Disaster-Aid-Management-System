@@ -97,7 +97,7 @@
                 <div class="inventory-details">
                   <div class="inventory-breakdown">
                     <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
-                      {{ request.available_inventory || 0 }} available
+                      {{" ", request.available_inventory || 0 }} available
                     </span>
                     <div class="inventory-sources" v-if="request.inventory_breakdown">
                       <span class="admin-inventory" v-if="request.inventory_breakdown.admin > 0">
@@ -112,10 +112,10 @@
                     <span class="can-fulfill">✓ Can be fully fulfilled</span>
                   </div>
                   <div class="fulfillment-indicator" v-else-if="request.available_inventory > 0">
-                    <span class="partial-fulfill">⚠ Can be partially fulfilled</span>
+                    <span class="partial-fulfill">Can be partially fulfilled</span>
                   </div>
                   <div class="fulfillment-indicator" v-else>
-                    <span class="no-fulfill">⚠ No inventory available</span>
+                    <span class="no-fulfill">No inventory available</span>
                   </div>
                 </div>
               </div>
@@ -142,7 +142,7 @@
                   </div>
                   <div class="pledge-status">
                     <span class="contribution-indicator">
-                      🤝 You've contributed to this request
+                      You've contributed to this request
                     </span>
                   </div>
                 </div>
@@ -160,7 +160,7 @@
               
               <div class="info-row">
                 <span class="label">Preferred Matching:</span>
-                <span class="value"> {{ request.preferred_match_type_name }}</span>
+                <span class="value"> {{ " ", request.preferred_match_type_name }}</span>
               </div>
               
               <div class="info-row" v-if="request.details">
@@ -515,7 +515,7 @@ onMounted(() => {
 }
 
 .stat-card.urgent {
-  border-color: #ff6b6b;
+  border-color: #d3c0a3;
   background: linear-gradient(135deg, #fff5f5, #ffebee);
 }
 
@@ -527,7 +527,7 @@ onMounted(() => {
 }
 
 .stat-card.urgent .stat-number {
-  color: #d32f2f;
+  color: #5c4033;
 }
 
 .stat-label {
@@ -809,7 +809,7 @@ onMounted(() => {
 }
 
 .contribution-indicator {
-  color: #2e7d32;
+  color: #5c4033;
   font-weight: 500;
 }
 
