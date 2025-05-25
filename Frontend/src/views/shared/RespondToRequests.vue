@@ -353,7 +353,7 @@ const fetchRequests = async () => {
           try {
             console.log('Fetching inventory for item:', request.item_name);
             const inventoryResponse = await api.get('/getItemAvailability');
-            console.log('Inventory response:', inventoryResponse.data);
+            console.log('Inventory response received, items count:', inventoryResponse.data.length);
             
             const itemInventory = inventoryResponse.data.find(
               item => item.name === request.item_name
@@ -366,6 +366,8 @@ const fetchRequests = async () => {
                 pledges: itemInventory.available_pledged || 0
               };
               console.log('Found inventory for', request.item_name, ':', request.available_inventory);
+            } else {
+              console.log('No inventory found for item:', request.item_name);
             }
           } catch (error) {
             console.error('Error fetching inventory for item:', request.item_name, error);
@@ -376,9 +378,9 @@ const fetchRequests = async () => {
         // Enhanced: Get user's pledges for this specific item
         if (authStore.userId && request.item_name) {
           try {
-            console.log('Fetching pledges for user:', authStore.userId);
+            console.log('Fetching pledges for user:', authStore.userId, 'item:', request.item_name);
             const pledgesResponse = await api.get(`/getPledges?user_id=${authStore.userId}`);
-            console.log('Pledges response:', pledgesResponse.data);
+            console.log('Pledges response received, pledges count:', pledgesResponse.data.length);
             
             // Find pledges for this specific item
             const userPledgesForItem = pledgesResponse.data.filter(
@@ -412,14 +414,14 @@ const fetchRequests = async () => {
     );
     
     requests.value = requestsWithInventory;
-    console.log('Final requests with inventory:', requests.value);
+    console.log('Final requests with inventory and pledges:', requests.value);
   } catch (error) {
     console.error('Error fetching requests:', error);
     
     // Check if it's a 404 error and provide more specific feedback
     if (error.response && error.response.status === 404) {
-      console.error('404 Error - API endpoint not found:', error.config.url);
-      alert('API endpoint not found. Please check if the server is running and the endpoint exists.');
+      console.error('404 Error - API endpoint not found:', error.config?.url || 'Unknown URL');
+      alert(`API endpoint not found: ${error.config?.url || 'Unknown endpoint'}. Please check if the server is running.`);
     } else {
       alert('Failed to load requests. Please try again.');
     }
@@ -771,39 +773,6 @@ onMounted(() => {
   color: #d32f2f;
 }
 
-/* Progress Section */
-.progress-section {
-  margin-bottom: 20px;
-}
-
-.progress-text {
-  font-size: 14px;
-  color: #5c4033;
-  margin-bottom: 8px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #66bb6a);
-  transition: width 0.3s ease;
-}
-
-.progress-percentage {
-  font-size: 14px;
-  font-weight: 600;
-  color: #5c4033;
-  text-align: right;
-}
-
-/* Enhanced: Your Pledges Info Styling */
 .your-pledges-info {
   background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
   border-radius: 8px;
@@ -868,6 +837,45 @@ onMounted(() => {
 .contribution-indicator {
   color: #2e7d32;
   font-weight: 500;
+}
+
+/* Progress Section */
+.progress-section {
+  margin-bottom: 20px;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #5c4033;
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
+  transition: width 0.3s ease;
+}
+
+.progress-percentage {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5c4033;
+  text-align: right;
+}
+
+/* Action Buttons */
+.card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Pagination */

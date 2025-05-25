@@ -1157,6 +1157,8 @@ def get_items_by_category(category_id):
 def get_item_availability():
     db = get_db()
     try:
+        print("=== GET ITEM AVAILABILITY CALLED ===")
+        
         # Query that combines item definitions with available quantities from pledges
         query = text("""
             SELECT 
@@ -1184,10 +1186,12 @@ def get_item_availability():
             ORDER BY c.category_name, i.name
         """)
         
+        print("Executing inventory query...")
         result = db.session.execute(query)
         
-        items = [
-            {
+        items = []
+        for row in result:
+            item_data = {
                 "id": row.item_id,
                 "name": row.name,
                 "description": row.description,
@@ -1199,11 +1203,152 @@ def get_item_availability():
                 "total_combined": row.total_combined,  # Total combined (base + pledged)
                 "available_combined": row.available_combined  # Available combined
             }
-            for row in result
-        ]
+            items.append(item_data)
+            print(f"Item: {row.name}, Available Combined: {row.available_combined}")
+        
+        print(f"Found {len(items)} items with availability data")
+        print("=== GET ITEM AVAILABILITY COMPLETED ===")
         
         return jsonify(items), 200
     except SQLAlchemyError as ex:
+        print(f"Database error in get_item_availability: {ex}")
+        return jsonify({"error": "Database error", "message": str(ex)}), 500
+    except Exception as ex:
+        print(f"General error in get_item_availability: {ex}")
+        return jsonify({"error": "Internal server error", "message": str(ex)}), 500
+    
+@api_routes.route('/getCombinedMatchOptions', methods=['GET'])
+def get_combined_match_options():
+    db = get_db()
+    
+    request_id = request.args.get('request_id')
+    
+    if not request_id:
+        return jsonify({"error": "Missing request_id parameter"}), 400
+    
+    try:
+        # First get the request details
+        request_query = text("""
+            SELECT r.request_id, r.user_id AS recipient_id, r.item_id,
+                   r.quantity, r.status, item.name AS item_name,
+                   u.zip_code AS recipient_zipcode,
+                   COALESCE(matches.total_matched, 0) AS total_matched,
+                   r.quantity - COALESCE(matches.total_matched, 0) AS quantity_needed
+            FROM dr_events.request r
+            JOIN dr_admin.user u ON r.user_id = u.user_id
+            JOIN dr_events.item ON r.item_id = item.item_id
+            LEFT JOIN (
+                SELECT request_id, SUM(match_quantity) AS total_matched
+                FROM dr_events.match
+                WHERE canceled_flag = 0
+                GROUP BY request_id
+            ) matches ON r.request_id = matches.request_id
+            WHERE r.request_id = :request_id
+        """)
+        
+        request_result = db.session.execute(request_query, {"request_id": request_id}).fetchone()
+        
+        if not request_result:
+            return jsonify({"error": "Request not found"}), 404
+        
+        # Then get all matching pledges
+        pledges_query = text("""
+            SELECT p.pledge_id, p.user_id AS donor_id, u.username AS donor_name,
+                   u.zip_code AS donor_zipcode, p.item_id, i.name AS item_name,
+                   i.category_id, c.category_name, p.item_quantity AS total_pledged,
+                   p.fulfilled_quantity, p.allocated_quantity,
+                   (p.item_quantity - (p.allocated_quantity + p.fulfilled_quantity)) AS available_quantity,
+                   p.days_to_ship
+            FROM dr_events.pledge p
+            JOIN dr_admin.user u ON p.user_id = u.user_id
+            JOIN dr_events.item i ON p.item_id = i.item_id
+            JOIN dr_events.category c ON i.category_id = c.category_id
+            WHERE p.item_id = :item_id
+              AND p.canceled_flag = 0
+              AND (p.item_quantity - (p.allocated_quantity + p.fulfilled_quantity)) > 0
+            ORDER BY p.days_to_ship ASC, available_quantity DESC
+        """)
+        
+        pledges_result = db.session.execute(pledges_query, {"item_id": request_result.item_id})
+        
+        pledges = [
+            {
+                "pledge_id": row.pledge_id,
+                "donor_id": row.donor_id,
+                "donor_name": row.donor_name,
+                "donor_zipcode": row.donor_zipcode,
+                "item_id": row.item_id,
+                "item_name": row.item_name,
+                "category_id": row.category_id,
+                "category_name": row.category_name,
+                "total_pledged": row.total_pledged,
+                "available_quantity": row.available_quantity,
+                "days_to_ship": row.days_to_ship
+            }
+            for row in pledges_result
+        ]
+        
+        # Get the base quantity from the item table
+        item_query = text("""
+            SELECT i.item_id, i.name, i.quantity AS base_quantity
+            FROM dr_events.item i
+            WHERE i.item_id = :item_id
+        """)
+        
+        item_result = db.session.execute(item_query, {"item_id": request_result.item_id}).fetchone()
+        base_quantity = item_result.base_quantity if item_result else 0
+        
+        # Calculate total available
+        total_from_pledges = sum(pledge["available_quantity"] for pledge in pledges)
+        total_available = total_from_pledges + base_quantity
+        
+        # Prepare the available sources list (admin + pledges)
+        available_sources = []
+        
+        # Add admin source if there's inventory
+        if base_quantity > 0:
+            available_sources.append({
+                "source_type": "admin",
+                "item_id": request_result.item_id,
+                "item_name": request_result.item_name,
+                "available_quantity": base_quantity
+            })
+        
+        # Add each pledge as a source
+        for pledge in pledges:
+            available_sources.append({
+                "source_type": "pledge",
+                "pledge_id": pledge["pledge_id"],
+                "donor_id": pledge["donor_id"],
+                "donor_name": pledge["donor_name"],
+                "days_to_ship": pledge["days_to_ship"],
+                "item_id": pledge["item_id"],
+                "item_name": pledge["item_name"],
+                "available_quantity": pledge["available_quantity"]
+            })
+        
+        response = {
+            "request": {
+                "request_id": request_result.request_id,
+                "recipient_id": request_result.recipient_id,
+                "item_id": request_result.item_id,
+                "item_name": request_result.item_name,
+                "quantity": request_result.quantity,
+                "status": request_result.status,
+                "recipient_zipcode": request_result.recipient_zipcode,
+                "total_matched": request_result.total_matched,
+                "quantity_needed": request_result.quantity_needed
+            },
+            "available_pledges": pledges,
+            "available_sources": available_sources,
+            "base_quantity": base_quantity,
+            "total_from_pledges": total_from_pledges,
+            "total_available": total_available
+        }
+        
+        return jsonify(response), 200
+    except SQLAlchemyError as ex:
+        db.session.rollback()
         return jsonify({"error": "Database error", "message": str(ex)}), 500
     except Exception as ex:
         return jsonify({"error": "Internal server error", "message": str(ex)}), 500
