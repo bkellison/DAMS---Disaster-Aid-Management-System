@@ -8,67 +8,104 @@
         <strong>Admin Observer Mode:</strong> You can view the matching interface but cannot create matches. This is a read-only preview of the manual matching process.
       </div>
       
-      <div v-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
-        Request has enough pledges and matches to fulfill.
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading match options...</p>
       </div>
       
+      <!-- Request Already Fulfilled -->
+      <div v-else-if="selectedRequest.request_quantity_remaining < 1" class="no-matches-message">
+        Request has enough pledges and matches to fulfill.
+        <div class="button-group">
+          <app-button variant="cancel" @click="goBack">Back to Requests</app-button>
+        </div>
+      </div>
+      
+      <!-- Main Content -->
       <div v-else>
         <div class="info-section">
           <h3>Request Details</h3>
-          <p><strong>Event:</strong> {{ selectedRequest.event_name }}</p>
-          <p><strong>Category:</strong> {{ selectedRequest.category_name }}</p>
+          <p><strong>Event:</strong> {{ selectedRequest.event_name || 'Unknown Event' }}</p>
+          <p><strong>Category:</strong> {{ selectedRequest.category_name || 'Unknown Category' }}</p>
           <p v-if="selectedRequest.item_name"><strong>Specific Item:</strong> {{ selectedRequest.item_name }}</p>
-          <p><strong>Quantity Requested:</strong> {{ selectedRequest.request_quantity }}</p>
-          <p><strong>Quantity Remaining:</strong> {{ selectedRequest.request_quantity_remaining }}</p>
+          <p><strong>Quantity Requested:</strong> {{ selectedRequest.request_quantity || 0 }}</p>
+          <p><strong>Quantity Remaining:</strong> {{ selectedRequest.request_quantity_remaining || 0 }}</p>
           <p v-if="selectedRequest.requester_zipcode"><strong>Recipient Location:</strong> {{ selectedRequest.requester_zipcode }}</p>
           <p v-if="selectedRequest.request_details"><strong>Details:</strong> {{ selectedRequest.request_details }}</p>
         </div>
         
-        <div class="form-section">
+        <!-- No Inventory Available -->
+        <div v-if="!hasAnyInventory" class="no-inventory-section">
+          <div class="no-pledges-message">
+            <h3>No Inventory Available</h3>
+            <p>Unfortunately, there are no available items that match this request:</p>
+            <ul class="no-inventory-reasons">
+              <li v-if="selectedRequest.item_name">No admin inventory or donor pledges for "{{ selectedRequest.item_name }}"</li>
+              <li v-else>No admin inventory or donor pledges for items in the "{{ selectedRequest.category_name }}" category</li>
+              <li>All existing pledges may already be allocated to other requests</li>
+            </ul>
+            
+            <div class="suggestions">
+              <h4>Suggestions:</h4>
+              <ul>
+                <li>Check back later as new pledges may become available</li>
+                <li>Contact donors to request pledges for this specific item</li>
+                <li>Consider if a similar item from another category could fulfill this need</li>
+              </ul>
+            </div>
+            
+            <div class="button-group">
+              <app-button variant="primary" @click="goToRequests">View All Requests</app-button>
+              <app-button variant="secondary" @click="goToPledges">View Available Pledges</app-button>
+              <app-button variant="cancel" @click="goBack">Back</app-button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Inventory Available -->
+        <div v-else class="form-section">
           <h3>Match Options</h3>
           
-          <div v-if="matchOptions.available_sources.length > 0" class="inventory-summary">
+          <div class="inventory-summary">
             <h4>Inventory Summary</h4>
             <div class="inventory-stats">
               <div class="inventory-stat">
                 <span class="stat-label">Total Available:</span>
-                <span class="stat-value">{{ matchOptions.total_available }} items</span>
+                <span class="stat-value">{{ safeMatchOptions.total_available }} items</span>
               </div>
               <div class="inventory-stat">
                 <span class="stat-label">Admin Inventory:</span>
-                <span class="stat-value">{{ matchOptions.base_quantity }} items</span>
+                <span class="stat-value">{{ safeMatchOptions.base_quantity }} items</span>
               </div>
               <div class="inventory-stat">
                 <span class="stat-label">Donor Pledges:</span>
-                <span class="stat-value">{{ matchOptions.total_from_pledges }} items</span>
+                <span class="stat-value">{{ safeMatchOptions.total_from_pledges }} items</span>
               </div>
             </div>
           </div>
           
-          <div v-if="matchOptions.available_sources.length === 0" class="no-pledges-message">
-            No inventory or pledges match the requested item.
-          </div>
-          
-          <div v-else class="source-tabs">
+          <div class="source-tabs">
             <button 
               class="tab-button" 
               :class="{ active: activeTab === 'admin' }"
-              @click="activeTab = 'admin'"
-              :disabled="matchOptions.base_quantity <= 0 || isAdminObserver"
+              @click="setActiveTab('admin')"
+              :disabled="!hasAdminInventory || isAdminObserver"
             >
-              Admin Inventory ({{ matchOptions.base_quantity }})
+              Admin Inventory ({{ safeMatchOptions.base_quantity }})
             </button>
             <button 
               class="tab-button" 
               :class="{ active: activeTab === 'pledges' }"
-              @click="activeTab = 'pledges'"
-              :disabled="matchOptions.available_pledges.length === 0 || isAdminObserver"
+              @click="setActiveTab('pledges')"
+              :disabled="!hasPledges || isAdminObserver"
             >
-              Donor Pledges ({{ matchOptions.total_from_pledges }})
+              Donor Pledges ({{ safeMatchOptions.total_from_pledges }})
             </button>
           </div>
           
-          <div v-if="activeTab === 'admin' && matchOptions.base_quantity > 0" class="tab-content">
+          <!-- Admin Inventory Tab -->
+          <div v-if="activeTab === 'admin' && hasAdminInventory" class="tab-content">
             <div class="admin-inventory">
               <h4>Match from Admin Inventory</h4>
               <p class="help-text">This will create a match using items directly from the system inventory.</p>
@@ -80,7 +117,7 @@
                   id="admin-match-quantity"
                   v-model="adminMatchQuantity" 
                   min="1" 
-                  :max="Math.min(matchOptions.base_quantity, selectedRequest.request_quantity_remaining)" 
+                  :max="maxAdminQuantity" 
                   :disabled="isAdminObserver"
                   :class="{ 'disabled-field': isAdminObserver }"
                 />
@@ -98,19 +135,20 @@
             </div>
           </div>
           
-          <div v-if="activeTab === 'pledges' && matchOptions.available_pledges.length > 0" class="tab-content">
+          <!-- Donor Pledges Tab -->
+          <div v-if="activeTab === 'pledges' && hasPledges" class="tab-content">
             <div class="pledge-selection">
               <h4>Select a Specific Donor Pledge</h4>
               <p class="help-text">Choose a specific donor pledge to fulfill this request.</p>
               
-              <div v-for="pledge in matchOptions.available_pledges" :key="pledge.pledge_id" class="pledge-option">
+              <div v-for="pledge in safeAvailablePledges" :key="pledge.pledge_id" class="pledge-option">
                 <button 
                   class="pledge-btn" 
                   :class="{ 
                     'selected': selectedPledge && selectedPledge.pledge_id === pledge.pledge_id,
                     'disabled-button': isAdminObserver 
                   }"
-                  @click="!isAdminObserver && selectPledge(pledge)"
+                  @click="selectPledge(pledge)"
                   :disabled="isAdminObserver"
                 >
                   <div class="pledge-donor">{{ pledge.donor_name || 'Donor #' + pledge.donor_id }}</div>
@@ -119,13 +157,14 @@
                     <span class="quantity-badge">Available: {{ pledge.available_quantity }}</span>
                   </div>
                   <div class="pledge-meta">
-                    <span class="ship-days">{{ pledge.days_to_ship }} days to ship</span>
-                    <span class="donor-location">{{ pledge.donor_zipcode }}</span>
+                    <span class="ship-days">{{ pledge.days_to_ship || 'TBD' }} days to ship</span>
+                    <span class="donor-location">{{ pledge.donor_zipcode || 'Location TBD' }}</span>
                   </div>
                 </button>
               </div>
             </div>
             
+            <!-- Match Details (only show if pledge is selected) -->
             <div v-if="selectedPledge" class="match-details">
               <h3>Match Details</h3>
               <p><strong>Selected Donor:</strong> {{ selectedPledge.donor_name || 'Donor #' + selectedPledge.donor_id }}</p>
@@ -138,7 +177,7 @@
                   id="match-quantity"
                   v-model="pledgeMatchQuantity" 
                   min="1" 
-                  :max="Math.min(selectedPledge.available_quantity, selectedRequest.request_quantity_remaining)" 
+                  :max="maxPledgeQuantity" 
                   :disabled="isAdminObserver"
                   :class="{ 'disabled-field': isAdminObserver }"
                 />
@@ -156,6 +195,7 @@
             </div>
           </div>
           
+          <!-- Auto Match Option -->
           <div class="auto-match-option">
             <h3>Or Use Auto Match</h3>
             <p>Let the system automatically match this request with the best available sources.</p>
@@ -165,7 +205,7 @@
               :disabled="isAdminObserver"
               :class="{ 'disabled-button': isAdminObserver }"
             >
-              {{ isAdminObserver ? 'View Only Mode' : `Auto Match (${matchOptions.total_available} available)` }}
+              {{ isAdminObserver ? 'View Only Mode' : `Auto Match (${safeMatchOptions.total_available} available)` }}
             </app-button>
           </div>
           
@@ -184,13 +224,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
 import api from '@/services/api';
 
-defineExpose({ AppButton });
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -199,6 +238,7 @@ const isAdminObserver = computed(() => authStore.isAdminObserver);
 const canCreateMatches = computed(() => authStore.canCreateMatches);
 
 // State variables
+const isLoading = ref(true);
 const selectedRequest = ref({});
 const matchOptions = ref({
   base_quantity: 0,
@@ -212,146 +252,152 @@ const selectedPledge = ref(null);
 const adminMatchQuantity = ref(1);
 const pledgeMatchQuantity = ref(1);
 
-// Select a pledge
+// Safe computed properties to prevent crashes
+const safeMatchOptions = computed(() => ({
+  base_quantity: matchOptions.value?.base_quantity || 0,
+  total_from_pledges: matchOptions.value?.total_from_pledges || 0,
+  total_available: matchOptions.value?.total_available || 0,
+  available_pledges: matchOptions.value?.available_pledges || [],
+  available_sources: matchOptions.value?.available_sources || []
+}));
+
+const safeAvailablePledges = computed(() => {
+  return safeMatchOptions.value.available_pledges.filter(pledge => 
+    pledge && pledge.pledge_id && pledge.available_quantity > 0
+  );
+});
+
+const hasAdminInventory = computed(() => safeMatchOptions.value.base_quantity > 0);
+const hasPledges = computed(() => safeAvailablePledges.value.length > 0);
+const hasAnyInventory = computed(() => hasAdminInventory.value || hasPledges.value);
+
+const maxAdminQuantity = computed(() => {
+  return Math.min(
+    safeMatchOptions.value.base_quantity,
+    selectedRequest.value?.request_quantity_remaining || 1
+  );
+});
+
+const maxPledgeQuantity = computed(() => {
+  if (!selectedPledge.value) return 1;
+  return Math.min(
+    selectedPledge.value.available_quantity || 1,
+    selectedRequest.value?.request_quantity_remaining || 1
+  );
+});
+
+// Safe tab switching
+const setActiveTab = (tab) => {
+  if (isAdminObserver.value) return;
+  
+  // Only allow switching to tabs that have content
+  if (tab === 'admin' && !hasAdminInventory.value) return;
+  if (tab === 'pledges' && !hasPledges.value) return;
+  
+  activeTab.value = tab;
+  
+  // Clear selected pledge when switching tabs
+  if (tab === 'admin') {
+    selectedPledge.value = null;
+  }
+};
+
+// Select a pledge with validation
 const selectPledge = (pledge) => {
-  console.log('=== SELECT PLEDGE CLICKED ===');
-  console.log('Pledge:', pledge);
-  console.log('Selected request:', selectedRequest.value);
+  if (isAdminObserver.value || !pledge || !pledge.pledge_id) return;
   
   selectedPledge.value = pledge;
   
-  // Set default match count
-  if (pledge && selectedRequest.value) {
-    pledgeMatchQuantity.value = Math.min(
-      pledge.available_quantity, 
-      selectedRequest.value.request_quantity_remaining || 1
-    );
-    console.log('Pledge match quantity set to:', pledgeMatchQuantity.value);
-  }
-  
-  console.log('Selected pledge set to:', selectedPledge.value);
-  console.log('=== SELECT PLEDGE END ===');
+  // Set safe default match quantity
+  pledgeMatchQuantity.value = Math.min(
+    pledge.available_quantity || 1,
+    selectedRequest.value?.request_quantity_remaining || 1
+  );
 };
 
-// Add error boundary to catch any Vue errors:
-import { onErrorCaptured } from 'vue';
+// Navigation functions
+const goBack = () => router.back();
+const goToRequests = () => router.push('/respond-to-requests');
+const goToPledges = () => router.push('/pledge-view');
+const goToAutoMatch = (requestId) => router.push(`/auto-match/${requestId}`);
 
-onErrorCaptured((error, instance, info) => {
-  console.error('=== VUE ERROR CAPTURED ===');
-  console.error('Error:', error);
-  console.error('Instance:', instance);
-  console.error('Info:', info);
-  console.error('Error stack:', error.stack);
-  console.error('=== END VUE ERROR ===');
-  
-  // Return false to propagate the error to the global error handler
-  return false;
-});
-
-// Also add window error handler to catch any uncaught errors:
-window.addEventListener('error', (event) => {
-  console.error('=== UNCAUGHT ERROR ===');
-  console.error('Error:', event.error);
-  console.error('Message:', event.message);
-  console.error('Filename:', event.filename);
-  console.error('Line:', event.lineno);
-  console.error('Column:', event.colno);
-  console.error('=== END UNCAUGHT ERROR ===');
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('=== UNHANDLED PROMISE REJECTION ===');
-  console.error('Reason:', event.reason);
-  console.error('Promise:', event.promise);
-  console.error('=== END UNHANDLED REJECTION ===');
-});
-
-// Get specific request by ID
+// Get specific request by ID with error handling
 async function getRequestDetails(requestId) {
-  console.log('=== GET REQUEST DETAILS START ===');
-  console.log('Request ID:', requestId);
-  
   try {
-    console.log('Making API call to get request details...');
+    if (!requestId) {
+      throw new Error('No request ID provided');
+    }
+
     const response = await api.get(`/getRequests?user_id=${authStore.userId}&request_id=${requestId}`);
-    console.log('Request details API response:', response);
-    console.log('Response data:', response.data);
-    console.log('Response data length:', response.data?.length);
     
-    if (response.data && response.data.length > 0) {
-      selectedRequest.value = response.data[0];
-      console.log('Selected request set to:', selectedRequest.value);
-      
-      // After getting request, fetch available matches
-      console.log('Starting to get match options...');
-      await getMatchOptions(requestId);
-      console.log('Match options loaded:', matchOptions.value);
-    } else {
-      console.error('ERROR: No request data returned');
-      console.log('Full response:', response);
-      alert('Error: Request not found or no data returned');
+    if (!response.data || response.data.length === 0) {
+      throw new Error('Request not found');
     }
+
+    selectedRequest.value = response.data[0];
+    
+    // Validate required properties
+    if (!selectedRequest.value.request_id) {
+      throw new Error('Invalid request data');
+    }
+
+    // Get match options
+    await getMatchOptions(requestId);
+    
   } catch (error) {
-    console.error('ERROR in getRequestDetails:', error);
-    console.error('Error response:', error.response);
-    if (error.response) {
-      console.error('Error status:', error.response.status);
-      console.error('Error data:', error.response.data);
-    }
-    throw error; // Re-throw to be caught by onMounted
+    console.error('Error getting request details:', error);
+    
+    // Set safe defaults
+    selectedRequest.value = {
+      request_id: requestId,
+      event_name: 'Unknown Event',
+      category_name: 'Unknown Category',
+      request_quantity: 0,
+      request_quantity_remaining: 0
+    };
+    
+    // Show user-friendly error
+    alert('Error loading request details: ' + error.message);
   }
-  
-  console.log('=== GET REQUEST DETAILS END ===');
 }
 
-// Get combined match options (admin inventory + pledges)
+// Get combined match options with comprehensive error handling
 async function getMatchOptions(requestId) {
-  console.log('=== GET MATCH OPTIONS START ===');
-  console.log('Request ID:', requestId);
-  
   try {
-    console.log('Making API call to get combined match options...');
     const response = await api.get(`/getCombinedMatchOptions?request_id=${requestId}`);
-    console.log('Match options API response:', response);
-    console.log('Match options data:', response.data);
     
     if (response.data) {
-      matchOptions.value = response.data;
-      console.log('Match options set to:', matchOptions.value);
-      
-      // Default to admin tab if there's admin inventory, otherwise pledges
-      const defaultTab = matchOptions.value.base_quantity > 0 ? 'admin' : 'pledges';
-      console.log('Setting default tab to:', defaultTab);
-      activeTab.value = defaultTab;
-      
-      // Set initial quantities
-      if (selectedRequest.value && selectedRequest.value.request_quantity_remaining) {
-        adminMatchQuantity.value = Math.min(
-          matchOptions.value.base_quantity || 0, 
-          selectedRequest.value.request_quantity_remaining
-        );
-        console.log('Admin match quantity set to:', adminMatchQuantity.value);
-      }
-      
-      // Clear selected pledge when fetching new match options
-      selectedPledge.value = null;
-      console.log('Selected pledge cleared');
-      
+      matchOptions.value = {
+        base_quantity: response.data.base_quantity || 0,
+        total_from_pledges: response.data.total_from_pledges || 0,
+        total_available: response.data.total_available || 0,
+        available_pledges: response.data.available_pledges || [],
+        available_sources: response.data.available_sources || []
+      };
     } else {
-      console.error('ERROR: No match options data returned');
-      console.log('Full response:', response);
+      throw new Error('No match options data received');
     }
+    
+    // Set appropriate default tab
+    await nextTick(); // Wait for computed properties to update
+    
+    if (hasAdminInventory.value) {
+      activeTab.value = 'admin';
+      adminMatchQuantity.value = Math.min(
+        matchOptions.value.base_quantity,
+        selectedRequest.value?.request_quantity_remaining || 1
+      );
+    } else if (hasPledges.value) {
+      activeTab.value = 'pledges';
+    }
+    
+    // Clear any selected pledge
+    selectedPledge.value = null;
+    
   } catch (error) {
-    console.error('ERROR in getMatchOptions:', error);
-    console.error('Error response:', error.response);
+    console.error('Error getting match options:', error);
     
-    if (error.response) {
-      console.error('Error status:', error.response.status);
-      console.error('Error data:', error.response.data);
-    }
-    
-    // Fallback with empty data if API call fails
-    console.log('Setting fallback match options...');
+    // Set safe empty state
     matchOptions.value = {
       base_quantity: 0,
       total_from_pledges: 0,
@@ -359,28 +405,23 @@ async function getMatchOptions(requestId) {
       available_pledges: [],
       available_sources: []
     };
-    console.log('Fallback match options set:', matchOptions.value);
   }
-  
-  console.log('=== GET MATCH OPTIONS END ===');
 }
 
-// Create a match from admin inventory
+// Create admin match with validation
 const createAdminMatch = async (request) => {
-  console.log('=== CREATE ADMIN MATCH CLICKED ===');
-  console.log('Request:', request);
-  console.log('Admin match quantity:', adminMatchQuantity.value);
-  console.log('Is Admin Observer:', isAdminObserver.value);
-  
   if (isAdminObserver.value) {
-    console.log('Admin Observer - blocking action');
     alert('Admin Observers cannot create matches from admin inventory.');
     return;
   }
   
   if (!adminMatchQuantity.value || adminMatchQuantity.value < 1) {
-    console.log('Invalid quantity');
     alert('Please enter a valid quantity');
+    return;
+  }
+  
+  if (!request?.request_id) {
+    alert('Invalid request data');
     return;
   }
   
@@ -391,24 +432,17 @@ const createAdminMatch = async (request) => {
       isAdminSource: true
     };
     
-    console.log('Sending admin match request:', matchRequest);
-    
-    const response = await api.post('/createAdminMatch', matchRequest);
-    console.log('Admin match response:', response);
-    
+    await api.post('/createAdminMatch', matchRequest);
     alert('Match created successfully from admin inventory!');
-    router.push({ path: `/match-view` });
+    router.push('/match-view');
   } catch (error) {
-    console.error('ERROR in createAdminMatch:', error);
-    console.error('Error response:', error.response);
+    console.error('Error creating admin match:', error);
     alert('Failed to create match from admin inventory. Please try again.');
   }
-  
-  console.log('=== CREATE ADMIN MATCH END ===');
 };
 
-// Create a match from a donor pledge
-async function createPledgeMatch(request, pledge) {
+// Create pledge match with comprehensive validation
+const createPledgeMatch = async (request, pledge) => {
   if (isAdminObserver.value) {
     alert('Admin Observers cannot create matches from donor pledges.');
     return;
@@ -419,127 +453,82 @@ async function createPledgeMatch(request, pledge) {
     return;
   }
   
+  if (!request?.request_id || !pledge?.pledge_id) {
+    alert('Invalid request or pledge data');
+    return;
+  }
+  
   try {
     const matchRequest = {
       requestId: request.request_id,
       pledgeId: pledge.pledge_id,
-      matchQuantity: pledgeMatchQuantity.value
+      matchQuantity: Number(pledgeMatchQuantity.value)
     };
     
-    // Add debugging
-    console.log('Sending match data:', matchRequest);
-    console.log('Data types:', {
-      requestId: typeof matchRequest.requestId,
-      pledgeId: typeof matchRequest.pledgeId, 
-      matchQuantity: typeof matchRequest.matchQuantity
-    });
-    
-    // Validate data before sending
-    if (!matchRequest.requestId || !matchRequest.pledgeId || !matchRequest.matchQuantity) {
-      console.error('Missing required match data:', matchRequest);
-      alert('Missing required data for match creation');
-      return;
-    }
-    
-    // Ensure matchQuantity is a number
-    matchRequest.matchQuantity = Number(matchRequest.matchQuantity);
+    // Validate data
     if (isNaN(matchRequest.matchQuantity) || matchRequest.matchQuantity <= 0) {
-      console.error('Invalid match quantity:', matchRequest.matchQuantity);
       alert('Invalid match quantity');
       return;
     }
-    
-    console.log('Final match data being sent:', matchRequest);
     
     const response = await api.post('/createMatch', matchRequest);
     
     if (response.status === 201 || response.status === 200) {
       alert('Match created successfully from donor pledge!');
-      router.push({ path: `/match-view` });
+      router.push('/match-view');
     } else {
-      console.error('Unexpected response:', response);
       alert('Unexpected response from server');
     }
     
   } catch (error) {
-    console.error('Error creating match:', error);
-    console.error('Error response:', error.response);
+    console.error('Error creating pledge match:', error);
     
     if (error.response?.data?.error) {
       alert('Error: ' + error.response.data.error);
-    } else if (error.response?.status === 500) {
-      alert('Server error occurred. Please check the console and try again.');
     } else {
       alert('Failed to create match from donor pledge. Please try again.');
     }
   }
-}
-
-// Navigate to auto match page
-function goToAutoMatch(requestId) {
-  router.push({ path: `/auto-match/${requestId}` });
-}
-
-// Go back to previous page
-const goBack = () => {
-  router.back();
 };
 
-// Ensure admin match quantity is valid
+// Watchers with null checks
 watch(adminMatchQuantity, (value) => {
-  const num = parseInt(value);
-  
-  if (!value || isNaN(num) || num < 1) {
+  if (!value || value < 1) {
     adminMatchQuantity.value = 1;
-  } else if (matchOptions.value && num > matchOptions.value.base_quantity) {
-    adminMatchQuantity.value = matchOptions.value.base_quantity;
-  } else if (selectedRequest.value && num > selectedRequest.value.request_quantity_remaining) {
-    adminMatchQuantity.value = selectedRequest.value.request_quantity_remaining;
+  } else if (value > maxAdminQuantity.value) {
+    adminMatchQuantity.value = maxAdminQuantity.value;
   }
 });
 
-// Ensure pledge match quantity is valid
 watch(pledgeMatchQuantity, (value) => {
-  const num = parseInt(value);
-  
-  if (!value || isNaN(num) || num < 1) {
+  if (!value || value < 1) {
     pledgeMatchQuantity.value = 1;
-  } else if (selectedPledge.value && num > selectedPledge.value.available_quantity) {
-    pledgeMatchQuantity.value = selectedPledge.value.available_quantity;
-  } else if (selectedRequest.value && num > selectedRequest.value.request_quantity_remaining) {
-    pledgeMatchQuantity.value = selectedRequest.value.request_quantity_remaining;
+  } else if (value > maxPledgeQuantity.value) {
+    pledgeMatchQuantity.value = maxPledgeQuantity.value;
   }
 });
 
-// Load initial data
+// Load initial data with comprehensive error handling
 onMounted(async () => {
-  console.log('=== MANUAL MATCH FORM MOUNTED ===');
-  
   try {
-    const requestId = route.params.id;
-    console.log('Route params:', route.params);
-    console.log('Request ID from route:', requestId);
-    console.log('Auth store user ID:', authStore.userId);
-    console.log('Is Admin Observer:', isAdminObserver.value);
-    console.log('Can Create Matches:', canCreateMatches.value);
+    isLoading.value = true;
     
+    const requestId = route.params.id;
     if (!requestId) {
-      console.error('ERROR: No request ID in route params');
-      alert('Error: No request ID provided');
-      return;
+      throw new Error('No request ID in route parameters');
     }
     
-    console.log('Starting to load request details...');
     await getRequestDetails(requestId);
-    console.log('Request details loaded:', selectedRequest.value);
     
   } catch (error) {
-    console.error('ERROR in onMounted:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error in onMounted:', error);
     alert('Error loading page: ' + error.message);
+    
+    // Redirect back to requests list on critical error
+    router.push('/respond-to-requests');
+  } finally {
+    isLoading.value = false;
   }
-  
-  console.log('=== MANUAL MATCH FORM MOUNTED COMPLETE ===');
 });
 </script>
 
@@ -575,6 +564,28 @@ onMounted(async () => {
   margin-bottom: 30px;
 }
 
+/* Loading state */
+.loading-state {
+  text-align: center;
+  padding: 50px;
+  color: #8B5E3C;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #8B5E3C;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Observer warning styling */
 .observer-warning {
   background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
@@ -591,12 +602,64 @@ onMounted(async () => {
 .no-matches-message {
   background-color: #ffecb3;
   color: #856404;
-  padding: 15px;
+  padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
   font-weight: 500;
   border: 1px solid #ffeeba;
   text-align: center;
+}
+
+/* No inventory section */
+.no-inventory-section {
+  text-align: left;
+}
+
+.no-pledges-message {
+  padding: 30px;
+  background-color: #fff3cd;
+  color: #856404;
+  border-radius: 12px;
+  border: 1px solid #ffeeba;
+  margin: 20px 0;
+}
+
+.no-pledges-message h3 {
+  color: #d32f2f;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.no-inventory-reasons {
+  margin: 15px 0;
+  padding-left: 20px;
+}
+
+.no-inventory-reasons li {
+  margin-bottom: 8px;
+  color: #856404;
+}
+
+.suggestions {
+  margin-top: 25px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+}
+
+.suggestions h4 {
+  color: #2e8b57;
+  margin-bottom: 10px;
+}
+
+.suggestions ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.suggestions li {
+  margin-bottom: 8px;
+  color: #2e8b57;
 }
 
 .info-section, .form-section {
@@ -843,6 +906,8 @@ input {
   display: flex;
   gap: 10px;
   margin-top: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .auto-match-option {
@@ -859,15 +924,6 @@ input {
 
 .auto-match-option p {
   margin-bottom: 15px;
-}
-
-.no-pledges-message {
-  padding: 20px;
-  background-color: #fff3cd;
-  color: #856404;
-  border-radius: 8px;
-  text-align: center;
-  margin: 20px 0;
 }
 
 .observer-notice {
@@ -913,6 +969,15 @@ input {
   .observer-notice {
     font-size: 14px;
     padding: 15px;
+  }
+  
+  .button-group {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .no-pledges-message {
+    padding: 20px;
   }
 }
 </style>
