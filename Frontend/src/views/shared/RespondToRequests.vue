@@ -760,19 +760,8 @@ onMounted(() => {
 }
 
 .stat-card.urgent {
-  border-color: #d3c0a3;
-  background: linear-gradient(135deg,  #f9f3e8, #f5e9db);
-}
-
-.stat-number {
-  font-size: 36px;
-  font-weight: 700;
-  color: #5c4033;
-  margin-bottom: 5px;
-}
-
-.stat-card.urgent .stat-number {
-  color: #5c4033;
+  border-color: #ff6b6b;
+  background: linear-gradient(135deg, #fff5f5, #ffebee);
 }
 
 .stat-card.donor-stats {

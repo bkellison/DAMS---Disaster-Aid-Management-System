@@ -48,6 +48,9 @@
         
         <div v-if="combinedOptions.total_available === 0" class="no-pledges-message">
           No inventory or pledges available for this item type. Please check back later or add more pledges.
+          <div class="button-group">
+            <AppButton variant="cancel" @click="goBack">{{ isAdminObserver ? 'Back to View' : 'Cancel' }}</AppButton>
+          </div>
         </div>
         
         <div v-else-if="combinedOptions.total_available < selectedRequest.request_quantity_remaining" class="partial-match-message">
@@ -132,10 +135,6 @@
           <div v-if="isAdminObserver" class="observer-notice">
             <p>Admin Observers can view the auto-matching interface and see all available algorithms and inventory.</p>
             <p>However, you cannot create matches or modify data. This ensures you can monitor the system without making changes.</p>
-          </div>
-          
-          <div class="button-group">
-            <AppButton variant="cancel" @click="goBack">{{ isAdminObserver ? 'Back to View' : 'Cancel' }}</AppButton>
           </div>
         </div>
       </div>
