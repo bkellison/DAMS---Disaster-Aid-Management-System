@@ -56,8 +56,6 @@
             </div>
             
             <div class="button-group">
-              <app-button variant="primary" @click="goToRequests">View All Requests</app-button>
-              <app-button variant="secondary" @click="goToPledges">View Available Pledges</app-button>
               <app-button variant="cancel" @click="goBack">Back</app-button>
             </div>
           </div>

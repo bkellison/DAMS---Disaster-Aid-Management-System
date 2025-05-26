@@ -18,6 +18,10 @@
           <div class="stat-number">{{ urgentRequests }}</div>
           <div class="stat-label">Urgent Requests</div>
         </div>
+        <div class="stat-card donor-stats" v-if="isDonor">
+          <div class="stat-number">{{ yourTotalPledges }}</div>
+          <div class="stat-label">Your Pledges</div>
+        </div>
       </div>
 
       <!-- Filters and Controls -->
@@ -83,12 +87,12 @@
             <div class="request-info">
               <div class="info-row">
                 <span class="label">Requested by:</span>
-                <span class="value"> {{ request.requested_by }}</span>
+                <span class="value">{{ request.requested_by }}</span>
               </div>
               
               <div class="info-row" v-if="request.item_name">
                 <span class="label">Specific Item:</span>
-                <span class="value"> {{ request.item_name }}</span>
+                <span class="value">{{ request.item_name }}</span>
               </div>
               
               <!-- ENHANCED: Available Inventory Display -->
@@ -97,7 +101,7 @@
                 <div class="inventory-details">
                   <div class="inventory-breakdown">
                     <span class="inventory-total" :class="getInventoryClass(request.available_inventory)">
-                      {{request.available_inventory || 0 }} available
+                      {{ request.available_inventory || 0 }} available
                     </span>
                     <div class="inventory-sources" v-if="request.inventory_breakdown">
                       <span class="admin-inventory" v-if="request.inventory_breakdown.admin > 0">
@@ -150,42 +154,81 @@
 
               <div class="info-row">
                 <span class="label">Total Requested:</span>
-                <span class="value"> {{ request.quantity }}</span>
+                <span class="value">{{ request.quantity }}</span>
               </div>
               
               <div class="info-row">
                 <span class="label">Still Needed:</span>
-                <span class="value urgent"> {{ request.request_quantity_remaining }}</span>
+                <span class="value urgent">{{ request.request_quantity_remaining }}</span>
               </div>
               
               <div class="info-row">
                 <span class="label">Preferred Matching:</span>
-                <span class="value"> {{request.preferred_match_type_name }}</span>
+                <span class="value">{{ request.preferred_match_type_name }}</span>
               </div>
               
               <div class="info-row" v-if="request.details">
                 <span class="label">Details:</span>
-                <span class="value"> {{ request.details }}</span>
+                <span class="value">{{ request.details }}</span>
               </div>
             </div>
 
-            <!-- Progress Bar -->
+            <!-- Overall Progress Bar -->
             <div class="progress-section">
               <div class="progress-text">
-                Progress: {{ request.quantity - request.request_quantity_remaining }} / {{ request.quantity }} fulfilled
+                Overall Progress: {{ request.quantity - request.request_quantity_remaining }} / {{ request.quantity }} fulfilled
               </div>
               <div class="progress-bar">
                 <div 
-                  class="progress-fill" 
+                  class="progress-fill overall" 
                   :style="{ width: getProgressPercentage(request) + '%' }"
                 ></div>
               </div>
               <div class="progress-percentage">{{ getProgressPercentage(request) }}%</div>
             </div>
 
+            <!-- NEW: Your Contribution Progress Bar (for donors only) -->
+            <div v-if="isDonor && request.your_pledged_quantity > 0" class="progress-section your-contribution">
+              <div class="progress-text donor-contribution">
+                Your Contribution: {{ request.your_pledged_quantity }} / {{ request.quantity }} 
+                ({{ Math.round((request.your_pledged_quantity / request.quantity) * 100) }}% of total need)
+              </div>
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill donor" 
+                  :style="{ width: Math.min((request.your_pledged_quantity / request.quantity) * 100, 100) + '%' }"
+                ></div>
+              </div>
+              <div class="donor-impact">
+                <span v-if="request.your_pledged_quantity >= request.quantity" class="full-coverage">
+                  You've covered the entire request!
+                </span>
+                <span v-else-if="request.your_pledged_quantity >= request.request_quantity_remaining" class="covers-remaining">
+                  Your pledges cover the remaining need
+                </span>
+                <span v-else class="partial-coverage">
+                  Great contribution! {{ request.request_quantity_remaining - request.your_pledged_quantity }} more needed
+                </span>
+              </div>
+            </div>
+
             <!-- Action Buttons -->
             <div class="card-actions">
+              <!-- NEW: Pledge Button for Donors -->
               <AppButton 
+                v-if="isDonor"
+                @click="openPledgeModal(request)" 
+                variant="success"
+                class="pledge-button"
+                :disabled="request.request_quantity_remaining <= 0"
+              >
+                <span v-if="request.your_pledged_quantity > 0">Add More Pledge</span>
+                <span v-else>Create Pledge</span>
+              </AppButton>
+
+              <!-- Admin/Advanced Actions -->
+              <AppButton 
+                v-if="isAdmin"
                 @click="navigateToManualMatch(request.request_id)" 
                 variant="primary"
                 size="small"
@@ -193,11 +236,21 @@
                 Manual Match
               </AppButton>
               <AppButton 
+                v-if="isAdmin"
                 @click="navigateToAutoMatch(request.request_id)" 
                 variant="secondary"
                 size="small"
               >
                 Auto Match
+              </AppButton>
+              
+              <!-- View Details Button (for all users) -->
+              <AppButton 
+                @click="viewRequestDetails(request)" 
+                variant="outline"
+                size="small"
+              >
+                View Details
               </AppButton>
             </div>
           </div>
@@ -229,11 +282,126 @@
         </AppButton>
       </div>
     </div>
+
+    <!-- NEW: Pledge Modal -->
+    <div v-if="showPledgeModal" class="modal-overlay" @click.self="closePledgeModal">
+      <div class="pledge-modal">
+        <div class="modal-header">
+          <h3>Create Pledge for Request</h3>
+          <button @click="closePledgeModal" class="close-button">&times;</button>
+        </div>
+        
+        <div class="modal-body" v-if="selectedRequestForPledge">
+          <div class="request-summary">
+            <h4>{{ selectedRequestForPledge.event_name }} - {{ selectedRequestForPledge.category }}</h4>
+            <p><strong>Requested by:</strong> {{ selectedRequestForPledge.requested_by }}</p>
+            <p><strong>Item:</strong> {{ selectedRequestForPledge.item_name || 'Any item in category' }}</p>
+            <p><strong>Still needed:</strong> {{ selectedRequestForPledge.request_quantity_remaining }}</p>
+            <p v-if="selectedRequestForPledge.your_pledged_quantity > 0">
+              <strong>You've already pledged:</strong> {{ selectedRequestForPledge.your_pledged_quantity }}
+            </p>
+          </div>
+
+          <div class="pledge-form">
+            <div class="form-group">
+              <label for="pledge-quantity">Quantity to Pledge:</label>
+              <input 
+                type="number" 
+                id="pledge-quantity"
+                v-model.number="pledgeForm.quantity" 
+                :min="1" 
+                :max="Math.max(selectedRequestForPledge.request_quantity_remaining, 100)"
+                required 
+              />
+              <div class="quantity-suggestions">
+                <button 
+                  type="button" 
+                  class="suggestion-btn"
+                  @click="pledgeForm.quantity = Math.min(selectedRequestForPledge.request_quantity_remaining, 5)"
+                  :disabled="selectedRequestForPledge.request_quantity_remaining < 5"
+                >
+                  {{ Math.min(selectedRequestForPledge.request_quantity_remaining, 5) }}
+                </button>
+                <button 
+                  type="button" 
+                  class="suggestion-btn"
+                  @click="pledgeForm.quantity = Math.min(selectedRequestForPledge.request_quantity_remaining, 10)"
+                  :disabled="selectedRequestForPledge.request_quantity_remaining < 10"
+                >
+                  {{ Math.min(selectedRequestForPledge.request_quantity_remaining, 10) }}
+                </button>
+                <button 
+                  type="button" 
+                  class="suggestion-btn"
+                  @click="pledgeForm.quantity = selectedRequestForPledge.request_quantity_remaining"
+                >
+                  All ({{ selectedRequestForPledge.request_quantity_remaining }})
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="days-to-ship">Days to Ship (optional):</label>
+              <input 
+                type="number" 
+                id="days-to-ship"
+                v-model.number="pledgeForm.daysToShip" 
+                :min="1" 
+                :max="30"
+                placeholder="Leave blank if flexible"
+              />
+              <div class="help-text">How many days after matching to ship the items</div>
+            </div>
+
+            <div class="form-group">
+              <label for="pledge-notes">Notes (optional):</label>
+              <textarea 
+                id="pledge-notes"
+                v-model="pledgeForm.notes" 
+                rows="3" 
+                placeholder="Any additional information about your pledge..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <div class="auto-match-option">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    v-model="pledgeForm.autoMatch"
+                  />
+                  Request priority matching for this specific request
+                </label>
+                <div class="help-text">
+                  If checked, administrators will be notified to prioritize matching your pledge with this request.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <AppButton 
+            variant="success" 
+            @click="submitPledge"
+            :disabled="isSubmittingPledge || !pledgeForm.quantity || pledgeForm.quantity < 1"
+          >
+            {{ isSubmittingPledge ? 'Creating Pledge...' : 'Create Pledge' }}
+          </AppButton>
+          <AppButton 
+            variant="secondary" 
+            @click="closePledgeModal"
+          >
+            Cancel
+          </AppButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppButton from '@/components/common/AppButton.vue';
@@ -241,6 +409,10 @@ import api from '@/services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+// Check user roles
+const isDonor = computed(() => authStore.role === 'Donor');
+const isAdmin = computed(() => authStore.role === 'Admin' || authStore.role === 'Admin Observer');
 
 // Reactive data
 const requests = ref([]);
@@ -251,6 +423,17 @@ const sortBy = ref('newest');
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
+// NEW: Pledge modal data
+const showPledgeModal = ref(false);
+const selectedRequestForPledge = ref(null);
+const isSubmittingPledge = ref(false);
+const pledgeForm = ref({
+  quantity: 1,
+  daysToShip: null,
+  notes: '',
+  autoMatch: false
+});
+
 // Computed properties
 const totalRequests = computed(() => requests.value.length);
 
@@ -260,6 +443,11 @@ const totalItemsNeeded = computed(() =>
 
 const urgentRequests = computed(() => 
   requests.value.filter(req => Number(req.request_quantity_remaining) === Number(req.quantity)).length
+);
+
+// NEW: Calculate total pledges by current user
+const yourTotalPledges = computed(() => 
+  requests.value.reduce((sum, req) => sum + Number(req.your_pledged_quantity || 0), 0)
 );
 
 const filteredRequests = computed(() => {
@@ -277,7 +465,7 @@ const sortedRequests = computed(() => {
   
   switch (sortBy.value) {
     case 'oldest':
-      return sorted; // Already sorted by newest, reverse for oldest
+      return sorted;
     case 'quantity-high':
       return sorted.sort((a, b) => b.quantity - a.quantity);
     case 'quantity-low':
@@ -315,75 +503,103 @@ const getInventoryClass = (availableInventory) => {
 };
 
 const navigateToManualMatch = (requestId) => {
-  console.log('=== MANUAL MATCH NAVIGATION ===');
-  console.log('Request ID:', requestId);
-  console.log('Request ID type:', typeof requestId);
-  
   if (!requestId) {
-    console.error('ERROR: Request ID is null or undefined');
     alert('Error: Invalid request ID');
     return;
   }
-  
-  const id = String(requestId);
-  const targetPath = `/create-match/${id}`;
-  
-  console.log('Target path:', targetPath);
-  
-  try {
-    router.push(targetPath);
-    console.log('Navigation initiated successfully');
-  } catch (error) {
-    console.error('Navigation error:', error);
-    alert('Navigation failed: ' + error.message);
-  }
+  router.push(`/create-match/${requestId}`);
 };
 
 const navigateToAutoMatch = (requestId) => {
-  console.log('=== AUTO MATCH NAVIGATION ===');
-  console.log('Request ID:', requestId);
-  console.log('Request ID type:', typeof requestId);
-  
   if (!requestId) {
-    console.error('ERROR: Request ID is null or undefined');
     alert('Error: Invalid request ID');
     return;
   }
-  
-  const id = String(requestId);
-  const targetPath = `/auto-match/${id}`;
-  
-  console.log('Target path:', targetPath);
-  
-  try {
-    router.push(targetPath);
-    console.log('Navigation initiated successfully');
-  } catch (error) {
-    console.error('Navigation error:', error);
-    alert('Navigation failed: ' + error.message);
-  }
+  router.push(`/auto-match/${requestId}`);
 };
 
 const viewRequestDetails = (request) => {
-  // Could open a modal or navigate to a details page
   alert(`Request Details:\n\nEvent: ${request.event_name}\nRequested by: ${request.requested_by}\nQuantity: ${request.quantity}\nDetails: ${request.details || 'No additional details'}`);
+};
+
+// NEW: Pledge modal functions
+const openPledgeModal = (request) => {
+  selectedRequestForPledge.value = request;
+  // Set default quantity to what's still needed (capped at 10 for UX)
+  pledgeForm.value.quantity = Math.min(request.request_quantity_remaining, 10);
+  pledgeForm.value.daysToShip = null;
+  pledgeForm.value.notes = '';
+  pledgeForm.value.autoMatch = false;
+  showPledgeModal.value = true;
+};
+
+const closePledgeModal = () => {
+  showPledgeModal.value = false;
+  selectedRequestForPledge.value = null;
+  pledgeForm.value = {
+    quantity: 1,
+    daysToShip: null,
+    notes: '',
+    autoMatch: false
+  };
+};
+
+const submitPledge = async () => {
+  if (!selectedRequestForPledge.value || !pledgeForm.value.quantity) {
+    alert('Please enter a valid quantity.');
+    return;
+  }
+
+  isSubmittingPledge.value = true;
+
+  try {
+    const pledgeData = {
+      user_id: authStore.userId,
+      selected_category_id: selectedRequestForPledge.value.category_id,
+      selected_item_id: selectedRequestForPledge.value.item_id || null,
+      item_quantity: pledgeForm.value.quantity,
+      days_to_ship: pledgeForm.value.daysToShip || null
+    };
+
+    console.log('Creating pledge:', pledgeData);
+
+    const response = await api.post('/createPledge', pledgeData);
+
+    if (response.status === 201) {
+      let successMessage = 'Pledge created successfully!';
+      
+      if (pledgeForm.value.autoMatch) {
+        successMessage += ' Administrators have been notified to prioritize matching this pledge.';
+      }
+      
+      alert(successMessage);
+      
+      // Refresh the requests to show updated data
+      await fetchRequests();
+      
+      closePledgeModal();
+    }
+  } catch (error) {
+    console.error('Error creating pledge:', error);
+    
+    if (error.response?.data?.error) {
+      alert('Error: ' + error.response.data.error);
+    } else {
+      alert('Error creating pledge. Please try again later.');
+    }
+  } finally {
+    isSubmittingPledge.value = false;
+  }
 };
 
 const fetchRequests = async () => {
   loading.value = true;
   try {
-    console.log('=== FETCHING REQUESTS START ===');
-    console.log('Making API request to /getRequestsForResponse');
-    
     const response = await api.get('/getRequestsForResponse');
-    console.log('SUCCESS /getRequestsForResponse - Status:', response.status);
-    console.log('Response data:', response.data);
     
     // Enhanced: Fetch inventory data and user pledges for each request
     const requestsWithInventory = await Promise.all(
-      response.data.map(async (request, index) => {
-        console.log(`Processing request ${index + 1}/${response.data.length}:`, request.request_id);
-        
+      response.data.map(async (request) => {
         // Initialize default values
         request.available_inventory = 0;
         request.inventory_breakdown = { admin: 0, pledges: 0 };
@@ -393,12 +609,7 @@ const fetchRequests = async () => {
         // Get available inventory for this specific item
         if (request.item_name) {
           try {
-            console.log(`Fetching inventory for item: ${request.item_name}`);
-            
             const inventoryResponse = await api.get('/getItemAvailability');
-            console.log('SUCCESS /getItemAvailability - Status:', inventoryResponse.status);
-            console.log(`Inventory items count: ${inventoryResponse.data.length}`);
-            
             const itemInventory = inventoryResponse.data.find(
               item => item.name === request.item_name
             );
@@ -409,34 +620,16 @@ const fetchRequests = async () => {
                 admin: itemInventory.base_quantity || 0,
                 pledges: itemInventory.available_pledged || 0
               };
-              console.log(`Found inventory for ${request.item_name}:`, request.available_inventory);
-            } else {
-              console.log(`No inventory found for item: ${request.item_name}`);
             }
           } catch (error) {
-            console.error(`ERROR fetching inventory for item ${request.item_name}:`, error);
-            console.error('Error details:', {
-              status: error.response?.status,
-              statusText: error.response?.statusText,
-              url: error.config?.url,
-              data: error.response?.data
-            });
-            
-            // This might be the 404 error!
-            if (error.response?.status === 404) {
-              console.error('FOUND 404 ERROR - /getItemAvailability endpoint missing!');
-            }
+            console.error('Error fetching inventory for item:', request.item_name, error);
           }
         }
 
-        // Enhanced: Get user's pledges for this specific item
+        // Get user's pledges for this specific item
         if (authStore.userId && request.item_name) {
           try {
-            console.log(`Fetching pledges for user: ${authStore.userId}, item: ${request.item_name}`);
-            
             const pledgesResponse = await api.get(`/getPledges?user_id=${authStore.userId}`);
-            console.log('SUCCESS /getPledges - Status:', pledgesResponse.status);
-            console.log(`Pledges count: ${pledgesResponse.data.length}`);
             
             // Find pledges for this specific item
             const userPledgesForItem = pledgesResponse.data.filter(
@@ -444,8 +637,6 @@ const fetchRequests = async () => {
             );
             
             if (userPledgesForItem.length > 0) {
-              console.log(`Found user pledges for ${request.item_name}:`, userPledgesForItem.length);
-              
               // Calculate totals across all pledges for this item
               const totalPledged = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.item_quantity || 0), 0);
               const totalAllocated = userPledgesForItem.reduce((sum, pledge) => sum + (pledge.allocated_quantity || 0), 0);
@@ -460,47 +651,18 @@ const fetchRequests = async () => {
               };
             }
           } catch (error) {
-            console.error(`ERROR fetching user pledges for item ${request.item_name}:`, error);
-            console.error('Error details:', {
-              status: error.response?.status,
-              statusText: error.response?.statusText,
-              url: error.config?.url,
-              data: error.response?.data
-            });
-            
-            // This might be another 404 error!
-            if (error.response?.status === 404) {
-              console.error('FOUND 404 ERROR - /getPledges endpoint issue!');
-            }
+            console.error('Error fetching user pledges for item:', request.item_name, error);
           }
         }
         
-        console.log(`Completed processing request ${request.request_id}`);
         return request;
       })
     );
     
     requests.value = requestsWithInventory;
-    console.log('Final requests with inventory and pledges:', requests.value.length);
-    console.log('=== FETCHING REQUESTS COMPLETE ===');
-    
   } catch (error) {
-    console.error('MAIN ERROR in fetchRequests:', error);
-    console.error('Error details:', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      data: error.response?.data
-    });
-    
-    // Check if it's a 404 error on the main endpoint
-    if (error.response && error.response.status === 404) {
-      console.error('MAIN 404 ERROR - /getRequestsForResponse endpoint not found!');
-      alert(`API endpoint not found: ${error.config?.url || '/getRequestsForResponse'}. Please check if the server is running and the endpoint exists.`);
-    } else {
-      alert('Failed to load requests. Please try again.');
-    }
+    console.error('Error fetching requests:', error);
+    alert('Failed to load requests. Please try again.');
   } finally {
     loading.value = false;
   }
@@ -508,27 +670,10 @@ const fetchRequests = async () => {
 
 const fetchCategories = async () => {
   try {
-    console.log('=== FETCHING CATEGORIES START ===');
-    console.log('Making API request to /getCategories');
-    
     const response = await api.get('/getCategories');
-    console.log('SUCCESS /getCategories - Status:', response.status);
-    console.log('Categories data:', response.data);
-    
     categories.value = response.data;
-    console.log('=== FETCHING CATEGORIES COMPLETE ===');
   } catch (error) {
-    console.error('ERROR fetching categories:', error);
-    console.error('Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      data: error.response?.data
-    });
-    
-    if (error.response?.status === 404) {
-      console.error('FOUND 404 ERROR - /getCategories endpoint missing!');
-    }
+    console.error('Error fetching categories:', error);
   }
 };
 
@@ -538,75 +683,12 @@ const refreshData = () => {
 };
 
 const filterRequests = () => {
-  currentPage.value = 1; // Reset to first page when filtering
+  currentPage.value = 1;
 };
 
 const sortRequests = () => {
-  currentPage.value = 1; // Reset to first page when sorting
+  currentPage.value = 1;
 };
-
-// Add network monitoring
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-  console.log('Fetch request:', args[0]);
-  return originalFetch.apply(this, arguments)
-    .then(response => {
-      if (!response.ok) {
-        console.error(`Fetch failed: ${response.status} ${response.statusText} for ${args[0]}`);
-      } else {
-        console.log(`Fetch success: ${response.status} for ${args[0]}`);
-      }
-      return response;
-    })
-    .catch(error => {
-      console.error(`Fetch error for ${args[0]}:`, error);
-      throw error;
-    });
-};
-
-// Monitor Axios requests
-import axios from 'axios';
-
-// Add request interceptor
-const requestInterceptor = axios.interceptors.request.use(
-  config => {
-    console.log(`Axios request: ${config.method?.toUpperCase()} ${config.url}`);
-    console.log('Request config:', {
-      baseURL: config.baseURL,
-      url: config.url,
-      method: config.method,
-      params: config.params
-    });
-    return config;
-  },
-  error => {
-    console.error('Axios request error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor
-const responseInterceptor = axios.interceptors.response.use(
-  response => {
-    console.log(`Axios response: ${response.status} for ${response.config.url}`);
-    return response;
-  },
-  error => {
-    console.error(`Axios response error: ${error.response?.status || 'Network Error'} for ${error.config?.url}`);
-    console.error('Full error:', error);
-    
-    if (error.response?.status === 404) {
-      console.error('404 ERROR DETAILS:');
-      console.error('URL:', error.config?.url);
-      console.error('Base URL:', error.config?.baseURL);
-      console.error('Full URL:', error.config?.baseURL + error.config?.url);
-      console.error('Method:', error.config?.method);
-      console.error('Headers:', error.config?.headers);
-    }
-    
-    return Promise.reject(error);
-  }
-);
 
 // Watchers
 watch(() => filteredRequests.value.length, () => {
@@ -617,19 +699,8 @@ watch(() => filteredRequests.value.length, () => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('RespondToRequests component mounted');
-  console.log('Auth store user ID:', authStore.userId);
-  console.log('Auth store role:', authStore.role);
-  
   fetchRequests();
   fetchCategories();
-});
-
-// Clean up interceptors when component unmounts
-onUnmounted(() => {
-  axios.interceptors.request.eject(requestInterceptor);
-  axios.interceptors.response.eject(responseInterceptor);
-  window.fetch = originalFetch; // Restore original fetch
 });
 </script>
 
@@ -702,6 +773,26 @@ onUnmounted(() => {
 
 .stat-card.urgent .stat-number {
   color: #5c4033;
+}
+
+.stat-card.donor-stats {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #f1f8e9, #e8f5e8);
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: 700;
+  color: #5c4033;
+  margin-bottom: 5px;
+}
+
+.stat-card.urgent .stat-number {
+  color: #d32f2f;
+}
+
+.stat-card.donor-stats .stat-number {
+  color: #2e7d32;
 }
 
 .stat-label {
@@ -862,11 +953,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.info-row .value.still-needed {
-  color: #6c757d;
-  font-weight: 500;
-}
-
 .inventory-info {
   background: #f8f9fa;
   border-radius: 8px;
@@ -992,10 +1078,22 @@ onUnmounted(() => {
   margin-bottom: 20px;
 }
 
+.progress-section.your-contribution {
+  background: linear-gradient(135deg, #f1f8e9, #e8f5e8);
+  border-radius: 8px;
+  padding: 15px;
+  border-left: 4px solid #4caf50;
+}
+
 .progress-text {
   font-size: 14px;
   color: #5c4033;
   margin-bottom: 8px;
+}
+
+.progress-text.donor-contribution {
+  color: #2e7d32;
+  font-weight: 600;
 }
 
 .progress-bar {
@@ -1008,8 +1106,15 @@ onUnmounted(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4caf50, #66bb6a);
   transition: width 0.3s ease;
+}
+
+.progress-fill.overall {
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
+}
+
+.progress-fill.donor {
+  background: linear-gradient(90deg, #2e7d32, #4caf50);
 }
 
 .progress-percentage {
@@ -1019,12 +1124,41 @@ onUnmounted(() => {
   text-align: right;
 }
 
+.donor-impact {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.full-coverage {
+  color: #2e7d32;
+}
+
+.covers-remaining {
+  color: #388e3c;
+}
+
+.partial-coverage {
+  color: #1976d2;
+}
+
+/* Action Buttons */
 .card-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.pledge-button {
+  background: linear-gradient(135deg, #4caf50, #2e7d32) !important;
+  font-weight: 600;
+}
+
+.pledge-button:hover {
+  background: linear-gradient(135deg, #388e3c, #1b5e20) !important;
+}
+
+/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -1039,6 +1173,185 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pledge-modal {
+  background: white;
+  border-radius: 15px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #e0d4c3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f5e1c5, #f0d4b8);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #5c4033;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #5c4033;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: rgba(92, 64, 51, 0.1);
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.request-summary {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #8B5E3C;
+}
+
+.request-summary h4 {
+  margin: 0 0 10px 0;
+  color: #5c4033;
+}
+
+.request-summary p {
+  margin: 5px 0;
+  color: #6c757d;
+}
+
+.pledge-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #5c4033;
+  font-size: 16px;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #d3c0a3;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #8B5E3C;
+  box-shadow: 0 0 0 2px rgba(139, 94, 60, 0.2);
+}
+
+.quantity-suggestions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.suggestion-btn {
+  background: #f5e1c5;
+  border: 1px solid #d3c0a3;
+  color: #5c4033;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.suggestion-btn:hover:not(:disabled) {
+  background: #8B5E3C;
+  color: white;
+}
+
+.suggestion-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.help-text {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.auto-match-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auto-match-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.auto-match-option input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.modal-footer {
+  padding: 20px 25px;
+  border-top: 1px solid #e0d4c3;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  background: #f8f9fa;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .respond-container {
     padding: 10px;
@@ -1075,6 +1388,19 @@ onUnmounted(() => {
   .pledge-breakdown {
     flex-direction: column;
     gap: 4px;
+  }
+
+  .pledge-modal {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .quantity-suggestions {
+    flex-wrap: wrap;
   }
 }
 </style>

@@ -116,14 +116,16 @@
                 ]"
                 :disabled="isAdminObserver || !canCreateMatches"
                 @click="createAutoMatch(selectedRequest, matchType)"
-                :title="isAdminObserver ? 'Admin Observers cannot create matches' : `Create auto match using ${matchType.name} algorithm`"
-              >
+                :title="isAdminObserver ? 'Admin Observers cannot create matches' : `Create auto match using ${matchType.name} algorithm`">
                 <span class="match-name">
                   {{ isAdminObserver ? 'View Only - ' : '' }}{{ capitalizeFirstLetter(matchType.name) }}
                 </span>
                 <span class="match-description">{{ matchType.description }}</span>
                 <span v-if="isPreferredMethod(matchType)" class="preferred-badge">Recipient's Preference</span>
               </button>
+            </div>
+            <div class="button-group">
+              <app-button variant="cancel" @click="goBack">{{ isAdminObserver ? 'Back to View' : 'Cancel' }}</app-button>
             </div>
           </div>
           
